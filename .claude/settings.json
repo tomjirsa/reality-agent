@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(poetry run pytest*)",
+      "Bash(poetry run alembic*)",
+      "Bash(poetry install*)",
+      "Bash(poetry add*)",
+      "Bash(poetry run python*)",
+      "Bash(docker compose*)",
+      "Bash(docker build*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(find . *)",
+      "Bash(ls*)",
+      "Bash(mkdir*)",
+      "Bash(touch*)"
+    ]
+  }
+}

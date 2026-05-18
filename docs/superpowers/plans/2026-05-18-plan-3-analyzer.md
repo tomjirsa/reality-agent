@@ -168,7 +168,7 @@ def test_inactive_listings_excluded(db):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/analyzer/test_signals.py -v
+poetry run pytest tests/analyzer/test_signals.py -v
 ```
 Expected: `ImportError: No module named 'analyzer.signals'`
 
@@ -261,7 +261,7 @@ def compute_signals(db: Session) -> None:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/analyzer/test_signals.py -v
+poetry run pytest tests/analyzer/test_signals.py -v
 ```
 Expected: 7 PASSED
 
@@ -378,7 +378,7 @@ def test_is_hot_false_when_not_cheap():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/analyzer/test_scoring.py -v
+poetry run pytest tests/analyzer/test_scoring.py -v
 ```
 Expected: `ImportError: No module named 'analyzer.scoring'`
 
@@ -446,7 +446,7 @@ def compute_scores(db: Session, bargain_threshold: float, hot_max_days: int) -> 
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/analyzer/test_scoring.py -v
+poetry run pytest tests/analyzer/test_scoring.py -v
 ```
 Expected: 13 PASSED
 
@@ -609,7 +609,7 @@ def test_send_hot_alerts_skips_below_threshold(db):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/analyzer/test_alerts.py -v
+poetry run pytest tests/analyzer/test_alerts.py -v
 ```
 Expected: `ImportError: No module named 'analyzer.alerts'`
 
@@ -787,7 +787,7 @@ def send_daily_digest(
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/analyzer/test_alerts.py -v
+poetry run pytest tests/analyzer/test_alerts.py -v
 ```
 Expected: 6 PASSED
 
@@ -909,7 +909,7 @@ if __name__ == "__main__":
 - [ ] **Step 2: Run all analyzer tests**
 
 ```bash
-pytest tests/analyzer/ -v
+poetry run pytest tests/analyzer/ -v
 ```
 Expected: 26 PASSED
 

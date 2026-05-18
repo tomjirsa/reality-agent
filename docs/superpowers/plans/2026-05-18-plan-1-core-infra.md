@@ -144,7 +144,7 @@ def test_settings_env_override(monkeypatch):
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-pytest tests/shared/test_config.py -v
+poetry run pytest tests/shared/test_config.py -v
 ```
 Expected: `ImportError: No module named 'shared.config'`
 
@@ -178,16 +178,10 @@ class Settings(BaseSettings):
 settings = Settings()
 ```
 
-- [ ] **Step 4: Install pydantic-settings**
+- [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-pip install pydantic-settings==2.2.1
-```
-
-- [ ] **Step 5: Run test to verify it passes**
-
-```bash
-pytest tests/shared/test_config.py -v
+poetry run pytest tests/shared/test_config.py -v
 ```
 Expected: 2 PASSED
 
@@ -375,7 +369,7 @@ def test_create_scrape_run(db):
 - [ ] **Step 3: Run tests to verify they fail**
 
 ```bash
-pytest tests/shared/test_models.py -v
+poetry run pytest tests/shared/test_models.py -v
 ```
 Expected: `ImportError: No module named 'shared.models'`
 
@@ -485,16 +479,10 @@ class ScrapeRun(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text)
 ```
 
-- [ ] **Step 5: Install sqlalchemy**
+- [ ] **Step 5: Run tests to verify they pass**
 
 ```bash
-pip install sqlalchemy==2.0.30
-```
-
-- [ ] **Step 6: Run tests to verify they pass**
-
-```bash
-pytest tests/shared/test_models.py -v
+poetry run pytest tests/shared/test_models.py -v
 ```
 Expected: 5 PASSED
 
@@ -550,13 +538,7 @@ git commit -m "feat: shared DB session factory"
 - Create: `migrations/script.py.mako`
 - Create: `migrations/versions/0001_initial_schema.py`
 
-- [ ] **Step 1: Install alembic**
-
-```bash
-pip install alembic==1.13.1
-```
-
-- [ ] **Step 2: Write `alembic.ini`**
+- [ ] **Step 1: Write `alembic.ini`**
 
 ```ini
 [alembic]
@@ -911,18 +893,7 @@ COPY dashboard/ ./dashboard/
 CMD ["uvicorn", "dashboard.main:app", "--host", "0.0.0.0", "--port", "8080"]
 ```
 
-- [ ] **Step 7: Write `requirements-dev.txt`**
-
-```
-pytest==8.2.0
-pytest-asyncio==0.23.6
-httpx==0.27.0
-sqlalchemy==2.0.30
-pydantic-settings==2.2.1
-alembic==1.13.1
-```
-
-- [ ] **Step 8: Write `docker-compose.yml`**
+- [ ] **Step 7: Write `docker-compose.yml`**
 
 ```yaml
 services:
@@ -990,8 +961,7 @@ Expected: no errors
 ```bash
 git add docker-compose.yml scraper/Dockerfile scraper/requirements.txt \
         analyzer/Dockerfile analyzer/requirements.txt \
-        dashboard/Dockerfile dashboard/requirements.txt \
-        requirements-dev.txt
+        dashboard/Dockerfile dashboard/requirements.txt
 git commit -m "feat: Docker Compose and service Dockerfiles"
 ```
 
@@ -999,16 +969,10 @@ git commit -m "feat: Docker Compose and service Dockerfiles"
 
 ### Task 7: Run full test suite
 
-- [ ] **Step 1: Install dev dependencies**
+- [ ] **Step 1: Run all tests**
 
 ```bash
-pip install -r requirements-dev.txt
-```
-
-- [ ] **Step 2: Run all tests**
-
-```bash
-pytest tests/ -v
+poetry run pytest tests/ -v
 ```
 Expected: 7 PASSED (2 config + 5 models)
 

@@ -175,7 +175,7 @@ def test_search_all_paginates():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/scraper/test_search.py -v
+poetry run pytest tests/scraper/test_search.py -v
 ```
 Expected: `ImportError: No module named 'scraper.search'`
 
@@ -252,7 +252,7 @@ def search_all(client: httpx.Client, config: SearchConfig) -> list[dict]:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/scraper/test_search.py -v
+poetry run pytest tests/scraper/test_search.py -v
 ```
 Expected: 7 PASSED
 
@@ -371,7 +371,7 @@ def test_parse_detail_price_per_m2_none_if_no_area():
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/scraper/test_detail.py -v
+poetry run pytest tests/scraper/test_detail.py -v
 ```
 Expected: `ImportError: No module named 'scraper.detail'`
 
@@ -451,7 +451,7 @@ def fetch_detail(client: httpx.Client, hash_id: int) -> dict[str, Any]:
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/scraper/test_detail.py -v
+poetry run pytest tests/scraper/test_detail.py -v
 ```
 Expected: 8 PASSED
 
@@ -614,7 +614,7 @@ def test_create_and_finish_scrape_run(db):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/scraper/test_main.py -v
+poetry run pytest tests/scraper/test_main.py -v
 ```
 Expected: `ImportError: No module named 'scraper.main'`
 
@@ -831,14 +831,14 @@ if __name__ == "__main__":
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/scraper/test_main.py -v
+poetry run pytest tests/scraper/test_main.py -v
 ```
 Expected: 7 PASSED
 
 - [ ] **Step 5: Run all scraper tests**
 
 ```bash
-pytest tests/scraper/ -v
+poetry run pytest tests/scraper/ -v
 ```
 Expected: 22 PASSED
 

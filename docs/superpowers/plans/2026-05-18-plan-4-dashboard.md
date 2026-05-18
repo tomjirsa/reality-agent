@@ -199,7 +199,7 @@ def test_listing_detail_returns_404_for_missing(client):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/dashboard/test_listings.py -v
+poetry run pytest tests/dashboard/test_listings.py -v
 ```
 Expected: `ImportError: No module named 'dashboard.routers.listings'`
 
@@ -301,7 +301,7 @@ def listing_detail(request: Request, hash_id: int, db: Session = Depends(get_db)
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/dashboard/test_listings.py -v
+poetry run pytest tests/dashboard/test_listings.py -v
 ```
 Expected: 6 PASSED
 
@@ -402,7 +402,7 @@ def test_market_overview_contains_district(client, session):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/dashboard/test_market.py -v
+poetry run pytest tests/dashboard/test_market.py -v
 ```
 Expected: `ImportError: No module named 'dashboard.routers.market'`
 
@@ -462,7 +462,7 @@ def market_overview(request: Request, db: Session = Depends(get_db)):
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/dashboard/test_market.py -v
+poetry run pytest tests/dashboard/test_market.py -v
 ```
 Expected: 2 PASSED
 
@@ -587,7 +587,7 @@ def test_trigger_analysis(client):
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-pytest tests/dashboard/test_configs.py -v
+poetry run pytest tests/dashboard/test_configs.py -v
 ```
 Expected: `ImportError: No module named 'dashboard.routers.configs'`
 
@@ -689,7 +689,7 @@ def trigger_analysis():
 - [ ] **Step 4: Run tests to verify they pass**
 
 ```bash
-pytest tests/dashboard/test_configs.py -v
+poetry run pytest tests/dashboard/test_configs.py -v
 ```
 Expected: 5 PASSED
 
@@ -1027,7 +1027,7 @@ git commit -m "feat: dashboard search config management + trigger analysis"
 - [ ] **Step 6: Run all dashboard tests**
 
 ```bash
-pytest tests/dashboard/ -v
+poetry run pytest tests/dashboard/ -v
 ```
 Expected: 13 PASSED
 
@@ -1045,7 +1045,7 @@ git commit -m "feat: dashboard Jinja2 templates"
 - [ ] **Step 1: Run all tests**
 
 ```bash
-pytest tests/ -v
+poetry run pytest tests/ -v
 ```
 Expected: ~48 PASSED across all 4 test suites (exact count depends on fixture overlap between modules)
 
