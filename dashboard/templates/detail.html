@@ -34,7 +34,7 @@
       <tr><td>Combined score</td><td><strong>{{ "{:.1f}".format(score.combined_score or 0) }}/100</strong></td></tr>
     </table>
     {% endif %}
-    <a href="https://www.sreality.cz/detail/prodej/byt/{{ listing.hash_id }}"
+    <a href="https://www.sreality.cz/detail/{{ 'pronajem' if listing.category_type_cb == 2 else 'prodej' }}/{{ 'dum' if listing.category_main_cb == 2 else 'byt' }}/{{ listing.hash_id }}"
        target="_blank" class="btn btn-primary">View on sreality.cz</a>
   </div>
   <div class="col-md-6">
