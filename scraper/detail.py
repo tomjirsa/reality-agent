@@ -1,6 +1,13 @@
 import re
+import time
+import logging
 import httpx
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
+
+DETAIL_DELAY = 0.3   # seconds between requests
+RETRY_DELAYS = [5, 15, 30]  # seconds to wait after 503/429
 
 BASE_URL = "https://www.sreality.cz/api/cs/v2/estates"
 HEADERS = {
@@ -75,6 +82,15 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
 
 def fetch_detail(client: httpx.Client, hash_id: int) -> dict[str, Any]:
     url = f"{BASE_URL}/{hash_id}"
-    resp = client.get(url, headers=HEADERS, timeout=30)
-    resp.raise_for_status()
-    return parse_detail(resp.json(), hash_id=hash_id)
+    time.sleep(DETAIL_DELAY)
+    for attempt, retry_wait in enumerate([0] + RETRY_DELAYS):
+        if retry_wait:
+            logger.warning("Rate limited, waiting %ds before retry (attempt %d)", retry_wait, attempt)
+            time.sleep(retry_wait)
+        resp = client.get(url, headers=HEADERS, timeout=30)
+        if resp.status_code in (429, 503):
+            continue
+        resp.raise_for_status()
+        return parse_detail(resp.json(), hash_id=hash_id)
+    resp.raise_for_status()  # final raise if all retries exhausted
+    return parse_detail(resp.json(), hash_id=hash_id)  # unreachable but satisfies type checker
