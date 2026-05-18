@@ -138,19 +138,21 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
                 .filter(Listing.hash_id.in_(current_hash_ids))
                 .all()
             }
-            details = []
+            stats = {"new": 0, "updated": 0}
             for estate in raw_estates:
                 hid = estate["hash_id"]
                 price = estate.get("price_czk")
                 if hid not in existing_prices or existing_prices[hid] != price:
-                    details.append(fetch_detail(client, hid))
+                    detail = fetch_detail(client, hid)
+                    s = upsert_listings(db, config, [detail])
+                    stats["new"] += s["new"]
+                    stats["updated"] += s["updated"]
                 else:
                     db.query(Listing).filter_by(hash_id=hid).update(
                         {"last_seen_at": datetime.now(UTC)}
                     )
-            db.commit()
+                    db.commit()
 
-            stats = upsert_listings(db, config, details)
             removed = detect_removals(db, config, current_hash_ids)
 
         finish_scrape_run(
