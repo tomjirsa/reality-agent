@@ -18,7 +18,7 @@ def listings_feed(
     min_price: int | None = None,
     max_price: int | None = None,
     min_score: float | None = None,
-    hot_only: int = 0,
+    hot_only: bool = False,
     page: int = 1,
 ):
     PAGE_SIZE = 50
