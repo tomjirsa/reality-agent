@@ -4,14 +4,14 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h2>Search Configs</h2>
   <form method="post" action="/trigger">
-    <button class="btn btn-warning" type="submit">▶ Run Analysis Now</button>
+    <button class="btn btn-warning" type="submit">&#9654; Run Analysis Now</button>
   </form>
 </div>
 
 <table class="table table-sm mb-4">
   <thead>
     <tr>
-      <th>ID</th><th>Name</th><th>Category</th><th>District</th><th>Price range</th><th>Active</th><th>Actions</th>
+      <th>ID</th><th>Name</th><th>Category</th><th>District</th><th>Layouts</th><th>Price range</th><th>Active</th><th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -20,10 +20,11 @@
       <td>{{ config.id }}</td>
       <td>{{ config.name }}</td>
       <td>{{ "Byty" if config.category_main_cb == 1 else "Domy" }} / {{ "Prodej" if config.category_type_cb == 1 else "Pronájem" }}</td>
-      <td>{{ config.locality_district_id or "Any" }}</td>
+      <td>{{ config.locality_district_id or config.locality_region_id or "Any" }}</td>
+      <td>{{ config.category_sub_cb or "All" }}</td>
       <td>
         {% if config.czk_price_min or config.czk_price_max %}
-          {{ "{:,}".format(config.czk_price_min or 0) }} – {{ "{:,}".format(config.czk_price_max or 0) }}
+          {{ "{:,}".format(config.czk_price_min or 0) }} – {{ "{:,}".format(config.czk_price_max or 0) }} CZK
         {% else %}Any{% endif %}
       </td>
       <td>{% if config.active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Paused</span>{% endif %}</td>
@@ -44,43 +45,240 @@
 </table>
 
 <h4>Add Search Config</h4>
-<form method="post" action="/configs" class="row g-3">
+<form id="addConfigForm" method="post" action="/configs" class="row g-3">
+
+  <div class="col-12">
+    <label class="form-label fw-semibold">Name <span class="text-danger">*</span></label>
+    <input type="text" name="name" class="form-control" required placeholder="e.g. Praha 2 byty 3+kk prodej">
+    <div class="form-text">A label for your own reference.</div>
+  </div>
+
   <div class="col-md-4">
-    <label class="form-label">Name</label>
-    <input type="text" name="name" class="form-control" required placeholder="e.g. Praha 2 byty 3+kk">
-  </div>
-  <div class="col-md-2">
-    <label class="form-label">Category</label>
-    <select name="category_main_cb" class="form-select">
-      <option value="1">Byty</option>
-      <option value="2">Domy</option>
+    <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+    <select name="category_main_cb" class="form-select" id="categoryMain" onchange="toggleLayoutSection()">
+      <option value="1">1 — Byty (apartments in apartment buildings)</option>
+      <option value="2">2 — Domy (houses &amp; villas)</option>
     </select>
   </div>
-  <div class="col-md-2">
-    <label class="form-label">Type</label>
+
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
     <select name="category_type_cb" class="form-select">
-      <option value="1">Prodej</option>
-      <option value="2">Pronájem</option>
+      <option value="1">1 — Prodej (for sale)</option>
+      <option value="2">2 — Pronájem (for rent)</option>
     </select>
   </div>
+
+  <div class="col-12" id="layoutSection">
+    <label class="form-label fw-semibold">Layouts (dispozice)</label>
+    <div class="form-text mb-2">Filter by apartment size. Leave all unchecked to match any layout.</div>
+    <input type="hidden" name="category_sub_cb" id="category_sub_cb">
+    <div class="d-flex flex-wrap gap-3">
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="2"  id="l2" ><label class="form-check-label" for="l2" >1+kk <span class="text-muted small">(2)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="3"  id="l3" ><label class="form-check-label" for="l3" >1+1 <span class="text-muted small">(3)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="4"  id="l4" ><label class="form-check-label" for="l4" >2+kk <span class="text-muted small">(4)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="5"  id="l5" ><label class="form-check-label" for="l5" >2+1 <span class="text-muted small">(5)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="6"  id="l6" ><label class="form-check-label" for="l6" >3+kk <span class="text-muted small">(6)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="7"  id="l7" ><label class="form-check-label" for="l7" >3+1 <span class="text-muted small">(7)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="8"  id="l8" ><label class="form-check-label" for="l8" >4+kk <span class="text-muted small">(8)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="9"  id="l9" ><label class="form-check-label" for="l9" >4+1 <span class="text-muted small">(9)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="10" id="l10"><label class="form-check-label" for="l10">5+kk <span class="text-muted small">(10)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="11" id="l11"><label class="form-check-label" for="l11">5+1 <span class="text-muted small">(11)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="12" id="l12"><label class="form-check-label" for="l12">6+ <span class="text-muted small">(12)</span></label></div>
+      <div class="form-check"><input class="form-check-input layout-cb" type="checkbox" value="16" id="l16"><label class="form-check-label" for="l16">Atypický <span class="text-muted small">(16)</span></label></div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <label class="form-label fw-semibold">District (okres) — grouped by kraj</label>
+    <select name="locality_district_id" class="form-select" id="districtSelect">
+      <option value="">— Whole Czech Republic —</option>
+
+      <optgroup label="Praha (kraj ID 10)">
+        <option value="5001">Praha 1</option>
+        <option value="5002">Praha 2</option>
+        <option value="5003">Praha 3</option>
+        <option value="5004">Praha 4</option>
+        <option value="5005">Praha 5</option>
+        <option value="5006">Praha 6</option>
+        <option value="5007">Praha 7</option>
+        <option value="5008">Praha 8</option>
+        <option value="5009">Praha 9</option>
+        <option value="5010">Praha 10</option>
+      </optgroup>
+
+      <optgroup label="Středočeský kraj (ID 11)">
+        <option value="48">Benešov</option>
+        <option value="49">Beroun</option>
+        <option value="50">Kladno</option>
+        <option value="51">Kolín</option>
+        <option value="52">Kutná Hora</option>
+        <option value="53">Mladá Boleslav</option>
+        <option value="54">Mělník</option>
+        <option value="55">Nymburk</option>
+        <option value="56">Praha-východ</option>
+        <option value="57">Praha-západ</option>
+        <option value="58">Příbram</option>
+        <option value="59">Rakovník</option>
+      </optgroup>
+
+      <optgroup label="Jihočeský kraj (ID 1)">
+        <option value="1">České Budějovice</option>
+        <option value="2">Český Krumlov</option>
+        <option value="3">Jindřichův Hradec</option>
+        <option value="4">Písek</option>
+        <option value="5">Prachatice</option>
+        <option value="6">Strakonice</option>
+        <option value="7">Tábor</option>
+      </optgroup>
+
+      <optgroup label="Plzeňský kraj (ID 2)">
+        <option value="8">Domažlice</option>
+        <option value="11">Klatovy</option>
+        <option value="12">Plzeň-město</option>
+        <option value="13">Plzeň-jih</option>
+        <option value="14">Plzeň-sever</option>
+        <option value="15">Rokycany</option>
+        <option value="17">Tachov</option>
+      </optgroup>
+
+      <optgroup label="Karlovarský kraj (ID 3)">
+        <option value="9">Cheb</option>
+        <option value="10">Karlovy Vary</option>
+        <option value="16">Sokolov</option>
+      </optgroup>
+
+      <optgroup label="Ústecký kraj (ID 4)">
+        <option value="19">Děčín</option>
+        <option value="20">Chomutov</option>
+        <option value="23">Litoměřice</option>
+        <option value="24">Louny</option>
+        <option value="25">Most</option>
+        <option value="26">Teplice</option>
+        <option value="27">Ústí nad Labem</option>
+      </optgroup>
+
+      <optgroup label="Liberecký kraj (ID 5)">
+        <option value="18">Česká Lípa</option>
+        <option value="21">Jablonec nad Nisou</option>
+        <option value="22">Liberec</option>
+        <option value="34">Semily</option>
+      </optgroup>
+
+      <optgroup label="Královéhradecký kraj (ID 6)">
+        <option value="28">Hradec Králové</option>
+        <option value="30">Jičín</option>
+        <option value="31">Náchod</option>
+        <option value="33">Rychnov nad Kněžnou</option>
+        <option value="36">Trutnov</option>
+      </optgroup>
+
+      <optgroup label="Pardubický kraj (ID 7)">
+        <option value="29">Chrudim</option>
+        <option value="32">Pardubice</option>
+        <option value="35">Svitavy</option>
+        <option value="37">Ústí nad Orlicí</option>
+      </optgroup>
+
+      <optgroup label="Kraj Vysočina (ID 13)">
+        <option value="66">Havlíčkův Brod</option>
+        <option value="67">Jihlava</option>
+        <option value="68">Pelhřimov</option>
+        <option value="69">Třebíč</option>
+        <option value="70">Žďár nad Sázavou</option>
+      </optgroup>
+
+      <optgroup label="Jihomoravský kraj (ID 14)">
+        <option value="71">Blansko</option>
+        <option value="72">Brno-město</option>
+        <option value="73">Brno-venkov</option>
+        <option value="74">Břeclav</option>
+        <option value="75">Hodonín</option>
+        <option value="76">Vyškov</option>
+        <option value="77">Znojmo</option>
+      </optgroup>
+
+      <optgroup label="Olomoucký kraj (ID 8)">
+        <option value="46">Jeseník</option>
+        <option value="42">Olomouc</option>
+        <option value="40">Prostějov</option>
+        <option value="43">Přerov</option>
+        <option value="44">Šumperk</option>
+      </optgroup>
+
+      <optgroup label="Zlínský kraj (ID 9)">
+        <option value="39">Kroměříž</option>
+        <option value="41">Uherské Hradiště</option>
+        <option value="45">Vsetín</option>
+        <option value="38">Zlín</option>
+      </optgroup>
+
+      <optgroup label="Moravskoslezský kraj (ID 12)">
+        <option value="60">Bruntál</option>
+        <option value="61">Frýdek-Místek</option>
+        <option value="62">Karviná</option>
+        <option value="63">Nový Jičín</option>
+        <option value="64">Opava</option>
+        <option value="65">Ostrava-město</option>
+      </optgroup>
+    </select>
+    <div class="form-text">
+      To search an entire kraj instead of a single district, leave this blank and enter the kraj ID in the Region field.
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <label class="form-label fw-semibold">Region (kraj) ID — whole kraj</label>
+    <input type="text" name="locality_region_id" class="form-control" placeholder="e.g. 10">
+    <div class="form-text">
+      Searches entire kraj. IDs: Praha&nbsp;10, Středočeský&nbsp;11, Jihočeský&nbsp;1,
+      Plzeňský&nbsp;2, Karlovarský&nbsp;3, Ústecký&nbsp;4, Liberecký&nbsp;5,
+      Královéhradecký&nbsp;6, Pardubický&nbsp;7, Olomoucký&nbsp;8, Zlínský&nbsp;9,
+      Moravskoslezský&nbsp;12, Vysočina&nbsp;13, Jihomoravský&nbsp;14.
+    </div>
+  </div>
+
   <div class="col-md-2">
-    <label class="form-label">District ID</label>
-    <input type="number" name="locality_district_id" class="form-control" placeholder="e.g. 5007">
+    <label class="form-label fw-semibold">Min price (CZK)</label>
+    <input type="number" name="czk_price_min" class="form-control" placeholder="e.g. 2 000 000">
   </div>
   <div class="col-md-2">
-    <label class="form-label">Layout codes</label>
-    <input type="text" name="category_sub_cb" class="form-control" placeholder="e.g. 4|5|6">
+    <label class="form-label fw-semibold">Max price (CZK)</label>
+    <input type="number" name="czk_price_max" class="form-control" placeholder="e.g. 8 000 000">
   </div>
   <div class="col-md-2">
-    <label class="form-label">Min price (CZK)</label>
-    <input type="number" name="czk_price_min" class="form-control">
+    <label class="form-label fw-semibold">Min area (m²)</label>
+    <input type="number" name="usable_area_min" class="form-control" placeholder="e.g. 50">
   </div>
   <div class="col-md-2">
-    <label class="form-label">Max price (CZK)</label>
-    <input type="number" name="czk_price_max" class="form-control">
+    <label class="form-label fw-semibold">Max area (m²)</label>
+    <input type="number" name="usable_area_max" class="form-control" placeholder="e.g. 120">
   </div>
-  <div class="col-md-2 d-flex align-items-end">
+
+  <div class="col-12">
     <button class="btn btn-primary" type="submit">Add Config</button>
   </div>
 </form>
+
+<script>
+function toggleLayoutSection() {
+  var cat = document.getElementById('categoryMain').value;
+  document.getElementById('layoutSection').style.display = (cat === '1') ? '' : 'none';
+}
+
+document.getElementById('addConfigForm').addEventListener('submit', function () {
+  // Combine checked layout codes into pipe-separated hidden field
+  var codes = Array.from(document.querySelectorAll('.layout-cb:checked')).map(function(cb) { return cb.value; });
+  document.getElementById('category_sub_cb').value = codes.join('|');
+
+  // Disable empty optional fields so they are not sent as empty strings
+  this.querySelectorAll('input[type="number"], input[type="text"]').forEach(function(el) {
+    if (el.name !== 'name' && el.value === '') el.disabled = true;
+  });
+  var ds = document.getElementById('districtSelect');
+  if (ds && ds.value === '') ds.disabled = true;
+});
+
+toggleLayoutSection();
+</script>
 {% endblock %}

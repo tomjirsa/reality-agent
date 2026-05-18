@@ -22,6 +22,10 @@ def list_configs(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request, "configs.html", {"configs": configs})
 
 
+def _to_int(v: str | None) -> int | None:
+    return int(v) if v else None
+
+
 @router.post("/configs")
 def create_config(
     db: Session = Depends(get_db),
@@ -29,27 +33,27 @@ def create_config(
     category_main_cb: int = Form(...),
     category_type_cb: int = Form(...),
     category_sub_cb: str = Form(None),
-    locality_region_id: int = Form(None),
-    locality_district_id: int = Form(None),
-    czk_price_min: int = Form(None),
-    czk_price_max: int = Form(None),
-    usable_area_min: int = Form(None),
-    usable_area_max: int = Form(None),
-    ownership: int = Form(None),
+    locality_region_id: str = Form(None),
+    locality_district_id: str = Form(None),
+    czk_price_min: str = Form(None),
+    czk_price_max: str = Form(None),
+    usable_area_min: str = Form(None),
+    usable_area_max: str = Form(None),
+    ownership: str = Form(None),
     no_auction: bool = Form(True),
 ):
     config = SearchConfig(
         name=name,
         category_main_cb=category_main_cb,
         category_type_cb=category_type_cb,
-        category_sub_cb=category_sub_cb,
-        locality_region_id=locality_region_id,
-        locality_district_id=locality_district_id,
-        czk_price_min=czk_price_min,
-        czk_price_max=czk_price_max,
-        usable_area_min=usable_area_min,
-        usable_area_max=usable_area_max,
-        ownership=ownership,
+        category_sub_cb=category_sub_cb or None,
+        locality_region_id=_to_int(locality_region_id),
+        locality_district_id=_to_int(locality_district_id),
+        czk_price_min=_to_int(czk_price_min),
+        czk_price_max=_to_int(czk_price_max),
+        usable_area_min=_to_int(usable_area_min),
+        usable_area_max=_to_int(usable_area_max),
+        ownership=_to_int(ownership),
         no_auction=no_auction,
         active=True,
         created_at=datetime.now(UTC),
