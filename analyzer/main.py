@@ -51,15 +51,15 @@ def run_daily_digest() -> None:
             alert_email=settings.alert_email,
             bargain_threshold=settings.bargain_score_threshold,
         )
+    except Exception:
+        logger.exception("Daily digest failed")
     finally:
         db.close()
 
 
-scheduler = BackgroundScheduler()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    scheduler = BackgroundScheduler()
     scheduler.add_job(
         run_analysis,
         "interval",
