@@ -1,1 +1,32 @@
-{% for row in summary %}{{ row.district_id }}{% endfor %}
+{% extends "base.html" %}
+{% block title %}Market Overview{% endblock %}
+{% block content %}
+<h2>Market Overview</h2>
+
+<table class="table table-sm table-hover">
+  <thead>
+    <tr>
+      <th>District ID</th>
+      <th>Category</th>
+      <th>Type</th>
+      <th>Active listings</th>
+      <th>Avg price/m²</th>
+      <th>Min price/m²</th>
+      <th>Max price/m²</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in summary %}
+    <tr>
+      <td>{{ row.district_id }}</td>
+      <td>{{ "Byty" if row.category_main_cb == 1 else "Domy" }}</td>
+      <td>{{ "Prodej" if row.category_type_cb == 1 else "Pronájem" }}</td>
+      <td>{{ row.listing_count }}</td>
+      <td>{{ "{:,.0f}".format(row.avg_price_per_m2) }}</td>
+      <td>{{ "{:,.0f}".format(row.min_price_per_m2) }}</td>
+      <td>{{ "{:,.0f}".format(row.max_price_per_m2) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,1 +1,66 @@
-{{ listing.name }}
+{% extends "base.html" %}
+{% block title %}{{ listing.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Listings</a></li>
+    <li class="breadcrumb-item active">{{ listing.name }}</li>
+  </ol>
+</nav>
+
+<div class="row">
+  <div class="col-md-6">
+    <h3>{{ listing.name }}
+      {% if score and score.is_hot %}<span class="badge bg-danger">HOT</span>{% endif %}
+    </h3>
+    <p class="text-muted">{{ listing.locality }}</p>
+    <table class="table table-sm">
+      <tr><td>Price</td><td><strong>{{ "{:,}".format(listing.price_czk or 0).replace(",", " ") }} CZK</strong></td></tr>
+      <tr><td>Area</td><td>{{ listing.area_m2 }} m²</td></tr>
+      <tr><td>Price/m²</td><td>{{ "{:,.0f}".format(listing.price_per_m2 or 0) }} CZK/m²</td></tr>
+      <tr><td>Floor</td><td>{{ listing.floor or "—" }}</td></tr>
+      <tr><td>Building type</td><td>{{ listing.building_type or "—" }}</td></tr>
+      <tr><td>Condition</td><td>{{ listing.condition or "—" }}</td></tr>
+      <tr><td>Ownership</td><td>{{ listing.ownership or "—" }}</td></tr>
+      <tr><td>First seen</td><td>{{ listing.first_seen_at.strftime("%Y-%m-%d") if listing.first_seen_at else "—" }}</td></tr>
+    </table>
+    {% if score %}
+    <h5>Bargain Scores</h5>
+    <table class="table table-sm">
+      <tr><td>Price percentile</td><td>{{ "{:.1f}".format(score.price_percentile or 0) }}th</td></tr>
+      <tr><td>Price/m² percentile</td><td>{{ "{:.1f}".format(score.price_per_m2_percentile or 0) }}th</td></tr>
+      <tr><td>Days on market</td><td>{{ score.days_on_market }}</td></tr>
+      <tr><td>Price drop</td><td>{% if score.had_price_drop %}{{ "{:.1f}".format(score.price_drop_pct or 0) }}%{% else %}None{% endif %}</td></tr>
+      <tr><td>Combined score</td><td><strong>{{ "{:.1f}".format(score.combined_score or 0) }}/100</strong></td></tr>
+    </table>
+    {% endif %}
+    <a href="https://www.sreality.cz/detail/prodej/byt/{{ listing.hash_id }}"
+       target="_blank" class="btn btn-primary">View on sreality.cz</a>
+  </div>
+  <div class="col-md-6">
+    {% if history %}
+    <h5>Price History</h5>
+    <canvas id="priceChart"></canvas>
+    <script>
+      const labels = [{% for h in history %}"{{ h.recorded_at.strftime('%Y-%m-%d') }}"{% if not loop.last %},{% endif %}{% endfor %}];
+      const data = [{% for h in history %}{{ h.price_czk }}{% if not loop.last %},{% endif %}{% endfor %}];
+      new Chart(document.getElementById('priceChart'), {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Price (CZK)',
+            data: data,
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+          }]
+        },
+        options: { responsive: true }
+      });
+    </script>
+    {% else %}
+    <p class="text-muted">No price history recorded.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

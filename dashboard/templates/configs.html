@@ -1,1 +1,86 @@
-stub
+{% extends "base.html" %}
+{% block title %}Search Configs{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Search Configs</h2>
+  <form method="post" action="/trigger">
+    <button class="btn btn-warning" type="submit">▶ Run Analysis Now</button>
+  </form>
+</div>
+
+<table class="table table-sm mb-4">
+  <thead>
+    <tr>
+      <th>ID</th><th>Name</th><th>Category</th><th>District</th><th>Price range</th><th>Active</th><th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for config in configs %}
+    <tr class="{% if not config.active %}text-muted{% endif %}">
+      <td>{{ config.id }}</td>
+      <td>{{ config.name }}</td>
+      <td>{{ "Byty" if config.category_main_cb == 1 else "Domy" }} / {{ "Prodej" if config.category_type_cb == 1 else "Pronájem" }}</td>
+      <td>{{ config.locality_district_id or "Any" }}</td>
+      <td>
+        {% if config.czk_price_min or config.czk_price_max %}
+          {{ "{:,}".format(config.czk_price_min or 0) }} – {{ "{:,}".format(config.czk_price_max or 0) }}
+        {% else %}Any{% endif %}
+      </td>
+      <td>{% if config.active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Paused</span>{% endif %}</td>
+      <td>
+        <form method="post" action="/configs/{{ config.id }}/toggle" class="d-inline">
+          <button class="btn btn-sm btn-outline-secondary">
+            {% if config.active %}Pause{% else %}Resume{% endif %}
+          </button>
+        </form>
+        <form method="post" action="/configs/{{ config.id }}/delete" class="d-inline"
+              onsubmit="return confirm('Delete {{ config.name }}?')">
+          <button class="btn btn-sm btn-outline-danger">Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h4>Add Search Config</h4>
+<form method="post" action="/configs" class="row g-3">
+  <div class="col-md-4">
+    <label class="form-label">Name</label>
+    <input type="text" name="name" class="form-control" required placeholder="e.g. Praha 2 byty 3+kk">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Category</label>
+    <select name="category_main_cb" class="form-select">
+      <option value="1">Byty</option>
+      <option value="2">Domy</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Type</label>
+    <select name="category_type_cb" class="form-select">
+      <option value="1">Prodej</option>
+      <option value="2">Pronájem</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">District ID</label>
+    <input type="number" name="locality_district_id" class="form-control" placeholder="e.g. 5007">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Layout codes</label>
+    <input type="text" name="category_sub_cb" class="form-control" placeholder="e.g. 4|5|6">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Min price (CZK)</label>
+    <input type="number" name="czk_price_min" class="form-control">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Max price (CZK)</label>
+    <input type="number" name="czk_price_max" class="form-control">
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button class="btn btn-primary" type="submit">Add Config</button>
+  </div>
+</form>
+{% endblock %}

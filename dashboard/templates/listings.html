@@ -1,1 +1,78 @@
-{% for listing, score in listings %}{{ listing.name }}{% endfor %}
+{% extends "base.html" %}
+{% block title %}Listings{% endblock %}
+{% block content %}
+<h2>Listings <small class="text-muted fs-6">({{ total }} results)</small></h2>
+
+<form class="row g-2 mb-3" method="get" action="/">
+  <div class="col-auto">
+    <input type="number" name="min_price" class="form-control form-control-sm"
+           placeholder="Min price" value="{{ filters.min_price or '' }}">
+  </div>
+  <div class="col-auto">
+    <input type="number" name="max_price" class="form-control form-control-sm"
+           placeholder="Max price" value="{{ filters.max_price or '' }}">
+  </div>
+  <div class="col-auto">
+    <input type="number" name="min_score" class="form-control form-control-sm"
+           placeholder="Min score" value="{{ filters.min_score or '' }}">
+  </div>
+  <div class="col-auto">
+    <div class="form-check mt-1">
+      <input class="form-check-input" type="checkbox" name="hot_only" value="1"
+             id="hotOnly" {% if filters.hot_only %}checked{% endif %}>
+      <label class="form-check-label" for="hotOnly">Hot only</label>
+    </div>
+  </div>
+  <div class="col-auto">
+    <button class="btn btn-sm btn-primary" type="submit">Filter</button>
+    <a class="btn btn-sm btn-outline-secondary" href="/">Reset</a>
+  </div>
+</form>
+
+<table class="table table-sm table-hover">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Price</th>
+      <th>Price/m²</th>
+      <th>Price pct</th>
+      <th>PPM² pct</th>
+      <th>Days</th>
+      <th>Score</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for listing, score in listings %}
+    <tr>
+      <td>
+        {% if score and score.is_hot %}
+          <span class="badge bg-danger me-1">HOT</span>
+        {% endif %}
+        {{ listing.name }}
+      </td>
+      <td>{{ "{:,}".format(listing.price_czk or 0).replace(",", " ") }}</td>
+      <td>{{ "{:,.0f}".format(listing.price_per_m2 or 0) }}</td>
+      <td>{% if score %}{{ "{:.0f}".format(score.price_percentile or 0) }}th{% endif %}</td>
+      <td>{% if score %}{{ "{:.0f}".format(score.price_per_m2_percentile or 0) }}th{% endif %}</td>
+      <td>{% if score %}{{ score.days_on_market }}{% endif %}</td>
+      <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% endif %}</td>
+      <td>
+        <a href="/listing/{{ listing.hash_id }}" class="btn btn-xs btn-outline-primary btn-sm">Detail</a>
+        <a href="https://www.sreality.cz/detail/prodej/byt/{{ listing.hash_id }}"
+           target="_blank" class="btn btn-xs btn-outline-secondary btn-sm">sreality</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="d-flex gap-2">
+  {% if page > 1 %}
+  <a href="?page={{ page - 1 }}" class="btn btn-outline-secondary btn-sm">← Previous</a>
+  {% endif %}
+  {% if total > page * page_size %}
+  <a href="?page={{ page + 1 }}" class="btn btn-outline-secondary btn-sm">Next →</a>
+  {% endif %}
+</div>
+{% endblock %}
