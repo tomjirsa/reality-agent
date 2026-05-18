@@ -59,9 +59,12 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
 
     price_per_m2 = price_czk / area_m2 if (price_czk and area_m2) else None
 
+    name_raw = data.get("name", "")
+    name = name_raw.get("value", "") if isinstance(name_raw, dict) else name_raw
+
     return {
         "hash_id": hash_id,
-        "name": data.get("name", ""),
+        "name": name,
         "price_czk": price_czk,
         "area_m2": area_m2,
         "price_per_m2": price_per_m2,

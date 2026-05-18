@@ -56,6 +56,13 @@ def test_parse_detail_maps_fields():
     assert result["raw_json"] == SAMPLE_DETAIL_RESPONSE
 
 
+def test_parse_detail_name_as_dict():
+    response = dict(SAMPLE_DETAIL_RESPONSE)
+    response["name"] = {"name": "Název", "value": "Prodej rodinného domu 128 m²"}
+    result = parse_detail(response, hash_id=HASH_ID)
+    assert result["name"] == "Prodej rodinného domu 128 m²"
+
+
 def test_parse_detail_area_extraction():
     response = dict(SAMPLE_DETAIL_RESPONSE)
     response["items"] = [{"name": "Užitná ploch", "value": "120"}]
