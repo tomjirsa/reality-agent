@@ -59,7 +59,7 @@
       <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% endif %}</td>
       <td>
         <a href="/listing/{{ listing.hash_id }}" class="btn btn-xs btn-outline-primary btn-sm">Detail</a>
-        <a href="https://www.sreality.cz/detail/{{ 'pronajem' if listing.category_type_cb == 2 else 'prodej' }}/{{ 'dum' if listing.category_main_cb == 2 else 'byt' }}/{{ listing.hash_id }}"
+        <a href="{{ sreality_url(listing) }}"
            target="_blank" class="btn btn-xs btn-outline-secondary btn-sm">sreality</a>
       </td>
     </tr>
