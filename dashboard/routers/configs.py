@@ -34,7 +34,7 @@ def create_config(
     category_type_cb: int = Form(...),
     category_sub_cb: str = Form(None),
     locality_region_id: str = Form(None),
-    locality_district_id: str = Form(None),
+    locality_district_id: list[str] = Form(None),
     czk_price_min: str = Form(None),
     czk_price_max: str = Form(None),
     usable_area_min: str = Form(None),
@@ -42,13 +42,14 @@ def create_config(
     ownership: str = Form(None),
     no_auction: bool = Form(True),
 ):
+    district_value = "|".join(locality_district_id) if locality_district_id else None
     config = SearchConfig(
         name=name,
         category_main_cb=category_main_cb,
         category_type_cb=category_type_cb,
         category_sub_cb=category_sub_cb or None,
         locality_region_id=_to_int(locality_region_id),
-        locality_district_id=_to_int(locality_district_id),
+        locality_district_id=district_value,
         czk_price_min=_to_int(czk_price_min),
         czk_price_max=_to_int(czk_price_max),
         usable_area_min=_to_int(usable_area_min),

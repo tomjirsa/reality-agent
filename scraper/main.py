@@ -108,8 +108,9 @@ def detect_removals(
             ~Listing.hash_id.in_(current_hash_ids),
         )
     )
-    if config.locality_district_id is not None:
-        query = query.filter(Listing.locality_district_id == config.locality_district_id)
+    if config.locality_district_id:
+        ids = [int(x) for x in config.locality_district_id.split("|") if x.strip()]
+        query = query.filter(Listing.locality_district_id.in_(ids))
     elif config.locality_region_id is not None:
         query = query.filter(Listing.locality_region_id == config.locality_region_id)
 

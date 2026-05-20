@@ -18,7 +18,7 @@ class SearchConfig(Base):
     category_type_cb: Mapped[int] = mapped_column(Integer, nullable=False)
     category_sub_cb: Mapped[Optional[str]] = mapped_column(Text)
     locality_region_id: Mapped[Optional[int]] = mapped_column(Integer)
-    locality_district_id: Mapped[Optional[int]] = mapped_column(Integer)
+    locality_district_id: Mapped[Optional[str]] = mapped_column(Text)
     czk_price_min: Mapped[Optional[int]] = mapped_column(Integer)
     czk_price_max: Mapped[Optional[int]] = mapped_column(Integer)
     usable_area_min: Mapped[Optional[int]] = mapped_column(Integer)
