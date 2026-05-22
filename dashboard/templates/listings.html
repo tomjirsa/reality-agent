@@ -28,6 +28,13 @@
            placeholder="Min score" value="{{ filters.min_score or '' }}">
   </div>
   <div class="col-auto">
+    <select name="status" class="form-select form-select-sm">
+      <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+      <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>Inactive</option>
+      <option value="all" {% if filters.status == 'all' %}selected{% endif %}>All</option>
+    </select>
+  </div>
+  <div class="col-auto">
     <div class="form-check mt-1">
       <input class="form-check-input" type="checkbox" name="hot_only" value="1"
              id="hotOnly" {% if filters.hot_only %}checked{% endif %}>
@@ -66,9 +73,11 @@
   </thead>
   <tbody>
     {% for listing, score, distance in listings %}
-    <tr>
+    <tr {% if not listing.is_active %}class="text-muted"{% endif %}>
       <td>
-        {% if score and score.is_hot %}
+        {% if not listing.is_active %}
+          <span class="badge bg-secondary me-1">inactive</span>
+        {% elif score and score.is_hot %}
           <span class="badge bg-danger me-1">HOT</span>
         {% endif %}
         {{ listing.name }}

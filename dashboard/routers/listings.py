@@ -24,6 +24,7 @@ def listings_feed(
     max_price: int | None = None,
     min_score: float | None = None,
     hot_only: bool = False,
+    status: str = "active",
     order_by: str | None = None,
     page: int = 1,
 ):
@@ -48,14 +49,17 @@ def listings_feed(
                     ListingDistance.search_config_id == search_config_id,
                 ),
             )
-            .filter(Listing.is_active == True)
         )
     else:
         query = (
             db.query(Listing, ListingScore)
             .outerjoin(ListingScore, Listing.hash_id == ListingScore.hash_id)
-            .filter(Listing.is_active == True)
         )
+
+    if status == "active":
+        query = query.filter(Listing.is_active == True)
+    elif status == "inactive":
+        query = query.filter(Listing.is_active == False)
 
     if category_main_cb is not None:
         query = query.filter(Listing.category_main_cb == category_main_cb)
@@ -101,6 +105,7 @@ def listings_feed(
                 "max_price": max_price,
                 "min_score": min_score,
                 "hot_only": hot_only,
+                "status": status,
                 "order_by": order_by,
             },
         },

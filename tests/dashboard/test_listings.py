@@ -96,6 +96,25 @@ def test_listings_feed_only_shows_active(client, session):
     assert "Byt 8003" not in resp.text
 
 
+def test_listings_feed_inactive_filter_shows_inactive(client, session):
+    add_listing_with_score(session, hash_id=8020, price=4_000_000, is_active=True)
+    add_listing_with_score(session, hash_id=8021, price=2_000_000, is_active=False)
+    resp = client.get("/?status=inactive")
+    assert resp.status_code == 200
+    assert "Byt 8020" not in resp.text
+    assert "Byt 8021" in resp.text
+    assert "inactive" in resp.text
+
+
+def test_listings_feed_all_filter_shows_both(client, session):
+    add_listing_with_score(session, hash_id=8022, price=4_000_000, is_active=True)
+    add_listing_with_score(session, hash_id=8023, price=2_000_000, is_active=False)
+    resp = client.get("/?status=all")
+    assert resp.status_code == 200
+    assert "Byt 8022" in resp.text
+    assert "Byt 8023" in resp.text
+
+
 def test_listings_feed_hot_filter(client, session):
     add_listing_with_score(session, hash_id=8004, price=4_000_000, is_hot=True)
     add_listing_with_score(session, hash_id=8005, price=4_000_000, is_hot=False)
