@@ -104,7 +104,9 @@ def test_trigger_analysis(client):
 
 
 def test_create_config_with_destination_geocodes_and_stores(client, session):
-    with patch("dashboard.routers.configs.geocode", return_value=(50.0815, 14.4241)) as mock_geo:
+    with patch("dashboard.routers.configs.geocode", return_value=(50.0815, 14.4241)) as mock_geo, \
+         patch("dashboard.routers.configs.settings") as mock_settings:
+        mock_settings.mapy_api_key = "test-key"
         resp = client.post("/configs", data={
             "name": "Geo Test Config",
             "category_main_cb": "1",
@@ -113,7 +115,7 @@ def test_create_config_with_destination_geocodes_and_stores(client, session):
             "travel_mode": "car",
         }, follow_redirects=True)
     assert resp.status_code == 200
-    mock_geo.assert_called_once_with("Václavské náměstí, Praha", "")
+    mock_geo.assert_called_once_with("Václavské náměstí, Praha", "test-key")
     config = session.query(SearchConfig).filter_by(name="Geo Test Config").first()
     assert config is not None
     assert config.destination_label == "Václavské náměstí, Praha"
@@ -123,7 +125,9 @@ def test_create_config_with_destination_geocodes_and_stores(client, session):
 
 
 def test_create_config_geocode_failure_returns_422(client, session):
-    with patch("dashboard.routers.configs.geocode", return_value=None):
+    with patch("dashboard.routers.configs.geocode", return_value=None), \
+         patch("dashboard.routers.configs.settings") as mock_settings:
+        mock_settings.mapy_api_key = "test-key"
         resp = client.post("/configs", data={
             "name": "Bad Geo Config",
             "category_main_cb": "1",
@@ -147,3 +151,18 @@ def test_create_config_without_destination_skips_geocoding(client, session):
     config = session.query(SearchConfig).filter_by(name="No Dest Config").first()
     assert config is not None
     assert config.destination_lat is None
+
+
+def test_create_config_destination_without_api_key_returns_503(client, session):
+    with patch("dashboard.routers.configs.settings") as mock_settings:
+        mock_settings.mapy_api_key = ""
+        resp = client.post("/configs", data={
+            "name": "No Key Config",
+            "category_main_cb": "1",
+            "category_type_cb": "1",
+            "destination_address": "Praha",
+            "travel_mode": "car",
+        }, follow_redirects=False)
+    assert resp.status_code == 503
+    assert "MAPY_API_KEY" in resp.text
+    assert session.query(SearchConfig).filter_by(name="No Key Config").first() is None

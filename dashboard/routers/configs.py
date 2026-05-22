@@ -50,6 +50,14 @@ def create_config(
     destination_lon = None
 
     if destination_address:
+        if not settings.mapy_api_key:
+            return HTMLResponse(
+                content=(
+                    "<p>Geocoding unavailable: <code>MAPY_API_KEY</code> is not configured.</p>"
+                    "<p><a href='/configs'>← Go back</a></p>"
+                ),
+                status_code=503,
+            )
         coords = geocode(destination_address, settings.mapy_api_key)
         if coords is None:
             return HTMLResponse(
