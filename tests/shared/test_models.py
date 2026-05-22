@@ -127,3 +127,18 @@ def test_create_scrape_run(db):
     result = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
     assert result.status == "success"
     assert result.listings_found == 10
+
+
+def test_new_model_tablenames():
+    from shared.models import ListingSearchConfig, ListingDistance
+    assert ListingSearchConfig.__tablename__ == "listing_search_configs"
+    assert ListingDistance.__tablename__ == "listing_distances"
+
+
+def test_search_config_has_destination_columns():
+    from shared.models import SearchConfig
+    cols = {c.key for c in SearchConfig.__table__.columns}
+    assert "destination_label" in cols
+    assert "destination_lat" in cols
+    assert "destination_lon" in cols
+    assert "travel_mode" in cols
