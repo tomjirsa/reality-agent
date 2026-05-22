@@ -13,6 +13,17 @@ from dashboard.deps import templates
 router = APIRouter()
 
 
+_SORT_COLS = {
+    "price":      lambda: Listing.price_czk,
+    "price_m2":   lambda: Listing.price_per_m2,
+    "score":      lambda: ListingScore.combined_score,
+    "days":       lambda: ListingScore.days_on_market,
+    "price_pct":  lambda: ListingScore.price_percentile,
+    "ppm2_pct":   lambda: ListingScore.price_per_m2_percentile,
+    "distance":   lambda: ListingDistance.distance_m,
+}
+
+
 @router.get("/", response_class=HTMLResponse)
 def listings_feed(
     request: Request,
@@ -25,7 +36,8 @@ def listings_feed(
     min_score: str | None = None,
     hot_only: bool = False,
     status: str = "active",
-    order_by: str | None = None,
+    order_by: str = "score",
+    order_dir: str = "desc",
     page: int = 1,
 ):
     PAGE_SIZE = 50
@@ -82,17 +94,25 @@ def listings_feed(
 
     total = query.count()
 
-    if order_by == "distance" and sc_id:
-        query = query.order_by(ListingDistance.distance_m.asc().nulls_last())
-    else:
-        query = query.order_by(ListingScore.combined_score.desc().nulls_last())
+    col_key = order_by if (order_by in _SORT_COLS and (order_by != "distance" or sc_id)) else "score"
+    col_expr = _SORT_COLS[col_key]()
+    sort_expr = col_expr.asc().nulls_last() if order_dir == "asc" else col_expr.desc().nulls_last()
+    query = query.order_by(sort_expr)
 
     raw = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
+    listings = raw if sc_id else [(lst, score, None) for lst, score in raw]
 
-    if sc_id:
-        listings = raw
-    else:
-        listings = [(lst, score, None) for lst, score in raw]
+    # Query string for sort links (all filters except order params)
+    qs_parts = []
+    if sc_id:         qs_parts.append(f"search_config_id={sc_id}")
+    if cat_cb:        qs_parts.append(f"category_main_cb={cat_cb}")
+    if dist_id:       qs_parts.append(f"locality_district_id={dist_id}")
+    if min_p:         qs_parts.append(f"min_price={min_p}")
+    if max_p:         qs_parts.append(f"max_price={max_p}")
+    if min_s:         qs_parts.append(f"min_score={min_s}")
+    if hot_only:      qs_parts.append("hot_only=1")
+    qs_parts.append(f"status={status}")
+    filter_qs = "&".join(qs_parts)
 
     return templates.TemplateResponse(
         request,
@@ -103,6 +123,8 @@ def listings_feed(
             "page": page,
             "page_size": PAGE_SIZE,
             "configs": configs,
+            "filter_qs": filter_qs,
+            "has_distance_col": bool(sc_id),
             "filters": {
                 "search_config_id": sc_id,
                 "category_main_cb": cat_cb,
@@ -112,7 +134,8 @@ def listings_feed(
                 "min_score": min_s,
                 "hot_only": hot_only,
                 "status": status,
-                "order_by": order_by,
+                "order_by": col_key,
+                "order_dir": order_dir,
             },
         },
     )

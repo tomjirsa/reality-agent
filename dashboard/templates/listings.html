@@ -41,16 +41,6 @@
       <label class="form-check-label" for="hotOnly">Hot only</label>
     </div>
   </div>
-  {% if filters.search_config_id %}
-  <div class="col-auto">
-    <select name="order_by" class="form-select form-select-sm">
-      <option value="">Sort: score</option>
-      <option value="distance" {% if filters.order_by == 'distance' %}selected{% endif %}>
-        Sort: distance
-      </option>
-    </select>
-  </div>
-  {% endif %}
   <div class="col-auto">
     <button class="btn btn-sm btn-primary" type="submit">Filter</button>
     <a class="btn btn-sm btn-outline-secondary" href="/">Reset</a>
@@ -58,16 +48,21 @@
 </form>
 
 <table class="table table-sm table-hover">
+  {% macro sort_th(label, col) %}
+    {% set next_dir = 'asc' if filters.order_by == col and filters.order_dir == 'desc' else 'desc' %}
+    {% set arrow = ' ▲' if filters.order_by == col and filters.order_dir == 'asc' else ' ▼' if filters.order_by == col else '' %}
+    <th><a href="/?{{ filter_qs }}&order_by={{ col }}&order_dir={{ next_dir }}" class="text-decoration-none text-reset">{{ label }}{{ arrow }}</a></th>
+  {% endmacro %}
   <thead>
     <tr>
       <th>Name</th>
-      <th>Price</th>
-      <th>Price/m²</th>
-      <th>Price pct</th>
-      <th>PPM² pct</th>
-      <th>Days</th>
-      <th>Score</th>
-      {% if filters.search_config_id %}<th>Distance</th>{% endif %}
+      {{ sort_th("Price", "price") }}
+      {{ sort_th("Price/m²", "price_m2") }}
+      {{ sort_th("Price pct", "price_pct") }}
+      {{ sort_th("PPM² pct", "ppm2_pct") }}
+      {{ sort_th("Days", "days") }}
+      {{ sort_th("Score", "score") }}
+      {% if has_distance_col %}{{ sort_th("Distance", "distance") }}{% endif %}
       <th></th>
     </tr>
   </thead>
@@ -88,7 +83,7 @@
       <td>{% if score %}{{ "{:.0f}".format(score.price_per_m2_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ score.days_on_market }}{% endif %}</td>
       <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% else %}<span class="badge bg-secondary">pending</span>{% endif %}</td>
-      {% if filters.search_config_id %}
+      {% if has_distance_col %}
       <td>
         {% if distance %}
           {{ "{:.1f}".format(distance.distance_m / 1000) }} km
