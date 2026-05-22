@@ -100,3 +100,17 @@ def test_route_uses_lon_lat_order_in_params():
     # mapy.cz expects "lon,lat" order
     assert params["start"] == "14.421,50.087"
     assert params["end"] == "14.435,50.075"
+
+
+def test_geocode_returns_none_on_malformed_response():
+    mock_resp = _mock_response({"items": [{"no_position_key": {}}]})
+    with patch("httpx.get", return_value=mock_resp):
+        result = geocode("Praha", "test-key")
+    assert result is None
+
+
+def test_route_returns_none_on_malformed_response():
+    mock_resp = _mock_response({"no_route_summary": {}})
+    with patch("httpx.get", return_value=mock_resp):
+        result = route(50.087, 14.421, 50.075, 14.435, "car", "test-key", hash_id=1)
+    assert result is None

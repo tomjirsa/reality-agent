@@ -34,6 +34,9 @@ def geocode(address: str, api_key: str) -> tuple[float, float] | None:
     except httpx.HTTPStatusError as exc:
         logger.warning("Geocode HTTP %s for address: %s", exc.response.status_code, address)
         return None
+    except KeyError:
+        logger.warning("Geocode unexpected response shape for address: %s", address)
+        return None
 
 
 def route(
@@ -46,7 +49,7 @@ def route(
     hash_id: int | None = None,
 ) -> dict | None:
     """Return {"distance_m": int, "duration_s": int} or None on any failure."""
-    route_type = TRAVEL_MODE_MAP.get(mode, "car_fast_traffic")
+    route_type = TRAVEL_MODE_MAP.get(mode, TRAVEL_MODE_MAP["car"])
     try:
         resp = httpx.get(
             f"{MAPY_BASE}/routing/route",
@@ -71,4 +74,7 @@ def route(
             logger.warning("Route HTTP 5xx (%s) for hash_id=%s", sc, hash_id)
         else:
             logger.warning("Route HTTP 4xx (%s) for hash_id=%s", sc, hash_id)
+        return None
+    except KeyError:
+        logger.warning("Route unexpected response shape for hash_id=%s", hash_id)
         return None
