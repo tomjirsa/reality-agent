@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     scrape_interval_hours: int = 6
     bargain_score_threshold: float = 70.0
     hot_offer_max_days: int = 7
+    mapy_api_key: str = ""
 
 
 settings = Settings()

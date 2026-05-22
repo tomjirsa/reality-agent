@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
-from shared.models import SearchConfig, Listing, ListingPriceHistory, ScrapeRun
+from shared.models import SearchConfig, Listing, ListingPriceHistory, ScrapeRun, ListingSearchConfig
 from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run
 
 UTC = timezone.utc
@@ -147,3 +147,24 @@ def test_create_and_finish_scrape_run(db):
     assert run.status == "success"
     assert run.listings_found == 10
     assert run.finished_at is not None
+
+
+def test_upsert_records_listing_search_config_link(db):
+    config = make_search_config(db)
+    details = [make_listing_detail(hash_id=4001)]
+    upsert_listings(db, config, details)
+    link = db.query(ListingSearchConfig).filter_by(
+        hash_id=4001, search_config_id=config.id
+    ).first()
+    assert link is not None
+
+
+def test_upsert_does_not_duplicate_link_on_second_call(db):
+    config = make_search_config(db)
+    details = [make_listing_detail(hash_id=4002)]
+    upsert_listings(db, config, details)
+    upsert_listings(db, config, details)
+    links = db.query(ListingSearchConfig).filter_by(
+        hash_id=4002, search_config_id=config.id
+    ).all()
+    assert len(links) == 1
