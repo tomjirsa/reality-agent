@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from shared.models import Base, Listing, ListingScore
+from shared.models import Base, Listing, ListingScore, SearchConfig, ListingSearchConfig, ListingDistance
 from shared.db import get_db
 from dashboard.main import app
 
@@ -124,3 +124,59 @@ def test_listing_detail_returns_200(client, session):
 def test_listing_detail_returns_404_for_missing(client):
     resp = client.get("/listing/9999999")
     assert resp.status_code == 404
+
+
+def _add_config_with_dest(session, name="Work Config"):
+    config = SearchConfig(
+        name=name,
+        category_main_cb=1,
+        category_type_cb=1,
+        active=True,
+        destination_label="Wenceslas Square",
+        destination_lat=50.0815,
+        destination_lon=14.4241,
+        travel_mode="car",
+        created_at=datetime.now(UTC),
+    )
+    session.add(config)
+    session.flush()
+    return config
+
+
+def test_listings_feed_config_filter_shows_only_linked_listings(client, session):
+    config = _add_config_with_dest(session, name="FilterConfig1")
+    add_listing_with_score(session, hash_id=7001, price=4_000_000)
+    add_listing_with_score(session, hash_id=7002, price=4_000_000)
+    session.add(ListingSearchConfig(hash_id=7001, search_config_id=config.id))
+    session.commit()
+
+    resp = client.get(f"/?search_config_id={config.id}")
+    assert resp.status_code == 200
+    assert "Byt 7001" in resp.text
+    assert "Byt 7002" not in resp.text
+
+
+def test_listings_feed_shows_distance_when_config_selected(client, session):
+    config = _add_config_with_dest(session, name="FilterConfig2")
+    add_listing_with_score(session, hash_id=7003, price=4_000_000)
+    session.add(ListingSearchConfig(hash_id=7003, search_config_id=config.id))
+    session.add(ListingDistance(
+        hash_id=7003,
+        search_config_id=config.id,
+        travel_mode="car",
+        distance_m=3500,
+        duration_s=720,
+        computed_at=datetime.now(UTC),
+    ))
+    session.commit()
+
+    resp = client.get(f"/?search_config_id={config.id}")
+    assert resp.status_code == 200
+    assert "3.5" in resp.text   # 3500m shown as 3.5 km
+    assert "12" in resp.text    # 720s shown as 12 min
+
+
+def test_listings_feed_no_filter_hides_distance_column(client, session):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "Distance" not in resp.text
