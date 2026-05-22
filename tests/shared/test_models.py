@@ -129,16 +129,78 @@ def test_create_scrape_run(db):
     assert result.listings_found == 10
 
 
-def test_new_model_tablenames():
-    from shared.models import ListingSearchConfig, ListingDistance
-    assert ListingSearchConfig.__tablename__ == "listing_search_configs"
-    assert ListingDistance.__tablename__ == "listing_distances"
+def test_listing_search_config_roundtrip(db):
+    from shared.models import SearchConfig, Listing, ListingSearchConfig
+    config = SearchConfig(
+        name="Test Config",
+        category_main_cb=1,
+        category_type_cb=1,
+        active=True,
+        created_at=datetime.now(UTC),
+    )
+    db.add(config)
+    db.flush()
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=99001,
+        name="Test Listing",
+        price_czk=3_000_000,
+        category_main_cb=1,
+        category_type_cb=1,
+        is_active=True,
+        first_seen_at=now,
+        last_seen_at=now,
+    )
+    db.add(listing)
+    db.flush()
+    link = ListingSearchConfig(hash_id=99001, search_config_id=config.id)
+    db.add(link)
+    db.commit()
+    fetched = db.query(ListingSearchConfig).filter_by(hash_id=99001, search_config_id=config.id).one()
+    assert fetched.hash_id == 99001
+    assert fetched.search_config_id == config.id
 
 
-def test_search_config_has_destination_columns():
-    from shared.models import SearchConfig
-    cols = {c.key for c in SearchConfig.__table__.columns}
-    assert "destination_label" in cols
-    assert "destination_lat" in cols
-    assert "destination_lon" in cols
-    assert "travel_mode" in cols
+def test_listing_distance_roundtrip(db):
+    from shared.models import SearchConfig, Listing, ListingDistance
+    config = SearchConfig(
+        name="Test Config 2",
+        category_main_cb=1,
+        category_type_cb=1,
+        destination_lat=50.08,
+        destination_lon=14.42,
+        travel_mode="car",
+        active=True,
+        created_at=datetime.now(UTC),
+    )
+    db.add(config)
+    db.flush()
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=99002,
+        name="Test Listing 2",
+        price_czk=4_000_000,
+        category_main_cb=1,
+        category_type_cb=1,
+        is_active=True,
+        first_seen_at=now,
+        last_seen_at=now,
+    )
+    db.add(listing)
+    db.flush()
+    dist = ListingDistance(
+        hash_id=99002,
+        search_config_id=config.id,
+        travel_mode="car",
+        distance_m=1500,
+        duration_s=300,
+        computed_at=now,
+    )
+    db.add(dist)
+    db.commit()
+    fetched = db.query(ListingDistance).filter_by(hash_id=99002, search_config_id=config.id).one()
+    assert fetched.distance_m == 1500
+    assert fetched.duration_s == 300
+    assert fetched.travel_mode == "car"
+    assert config.destination_lat == 50.08
+    assert config.travel_mode == "car"

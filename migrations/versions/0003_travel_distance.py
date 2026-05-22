@@ -21,18 +21,22 @@ def upgrade() -> None:
     op.add_column("search_configs", sa.Column("travel_mode", sa.Text(), nullable=True))
     op.create_table(
         "listing_search_configs",
-        sa.Column("hash_id", sa.BigInteger(), sa.ForeignKey("listings.hash_id"), nullable=False),
-        sa.Column("search_config_id", sa.Integer(), sa.ForeignKey("search_configs.id"), nullable=False),
+        sa.Column("hash_id", sa.BigInteger(), nullable=False),
+        sa.Column("search_config_id", sa.Integer(), nullable=False),
+        sa.ForeignKeyConstraint(["hash_id"], ["listings.hash_id"]),
+        sa.ForeignKeyConstraint(["search_config_id"], ["search_configs.id"]),
         sa.PrimaryKeyConstraint("hash_id", "search_config_id"),
     )
     op.create_table(
         "listing_distances",
-        sa.Column("hash_id", sa.BigInteger(), sa.ForeignKey("listings.hash_id"), nullable=False),
-        sa.Column("search_config_id", sa.Integer(), sa.ForeignKey("search_configs.id"), nullable=False),
+        sa.Column("hash_id", sa.BigInteger(), nullable=False),
+        sa.Column("search_config_id", sa.Integer(), nullable=False),
         sa.Column("travel_mode", sa.Text(), nullable=False),
         sa.Column("distance_m", sa.Integer(), nullable=False),
         sa.Column("duration_s", sa.Integer(), nullable=False),
         sa.Column("computed_at", sa.TIMESTAMP(timezone=True), nullable=False),
+        sa.ForeignKeyConstraint(["hash_id"], ["listings.hash_id"]),
+        sa.ForeignKeyConstraint(["search_config_id"], ["search_configs.id"]),
         sa.PrimaryKeyConstraint("hash_id", "search_config_id"),
     )
 
