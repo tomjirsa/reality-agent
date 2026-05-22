@@ -5,6 +5,17 @@
 
 <form class="row g-2 mb-3" method="get" action="/">
   <div class="col-auto">
+    <select name="search_config_id" class="form-select form-select-sm">
+      <option value="">All searches</option>
+      {% for config in configs %}
+      <option value="{{ config.id }}"
+        {% if filters.search_config_id == config.id %}selected{% endif %}>
+        {{ config.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
     <input type="number" name="min_price" class="form-control form-control-sm"
            placeholder="Min price" value="{{ filters.min_price or '' }}">
   </div>
@@ -23,6 +34,16 @@
       <label class="form-check-label" for="hotOnly">Hot only</label>
     </div>
   </div>
+  {% if filters.search_config_id %}
+  <div class="col-auto">
+    <select name="order_by" class="form-select form-select-sm">
+      <option value="">Sort: score</option>
+      <option value="distance" {% if filters.order_by == 'distance' %}selected{% endif %}>
+        Sort: distance
+      </option>
+    </select>
+  </div>
+  {% endif %}
   <div class="col-auto">
     <button class="btn btn-sm btn-primary" type="submit">Filter</button>
     <a class="btn btn-sm btn-outline-secondary" href="/">Reset</a>
@@ -39,11 +60,12 @@
       <th>PPM² pct</th>
       <th>Days</th>
       <th>Score</th>
+      {% if filters.search_config_id %}<th>Distance</th>{% endif %}
       <th></th>
     </tr>
   </thead>
   <tbody>
-    {% for listing, score in listings %}
+    {% for listing, score, distance in listings %}
     <tr>
       <td>
         {% if score and score.is_hot %}
@@ -57,6 +79,14 @@
       <td>{% if score %}{{ "{:.0f}".format(score.price_per_m2_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ score.days_on_market }}{% endif %}</td>
       <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% endif %}</td>
+      {% if filters.search_config_id %}
+      <td>
+        {% if distance %}
+          {{ "{:.1f}".format(distance.distance_m / 1000) }} km
+          / {{ (distance.duration_s // 60) }} min
+        {% else %}—{% endif %}
+      </td>
+      {% endif %}
       <td>
         <a href="/listing/{{ listing.hash_id }}" class="btn btn-xs btn-outline-primary btn-sm">Detail</a>
         <a href="{{ sreality_url(listing) }}"
@@ -69,10 +99,12 @@
 
 <div class="d-flex gap-2">
   {% if page > 1 %}
-  <a href="?page={{ page - 1 }}" class="btn btn-outline-secondary btn-sm">← Previous</a>
+  <a href="?page={{ page - 1 }}&search_config_id={{ filters.search_config_id or '' }}"
+     class="btn btn-outline-secondary btn-sm">← Previous</a>
   {% endif %}
   {% if total > page * page_size %}
-  <a href="?page={{ page + 1 }}" class="btn btn-outline-secondary btn-sm">Next →</a>
+  <a href="?page={{ page + 1 }}&search_config_id={{ filters.search_config_id or '' }}"
+     class="btn btn-outline-secondary btn-sm">Next →</a>
   {% endif %}
 </div>
 {% endblock %}

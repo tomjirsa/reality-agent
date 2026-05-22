@@ -27,6 +27,10 @@ class SearchConfig(Base):
     no_auction: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    destination_label: Mapped[Optional[str]] = mapped_column(Text)
+    destination_lat: Mapped[Optional[float]] = mapped_column(Float)
+    destination_lon: Mapped[Optional[float]] = mapped_column(Float)
+    travel_mode: Mapped[Optional[str]] = mapped_column(Text)
 
 
 class Listing(Base):
@@ -99,3 +103,29 @@ class ScrapeRun(Base):
     listings_removed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     status: Mapped[str] = mapped_column(Text, default="running", nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text)
+
+
+class ListingSearchConfig(Base):
+    __tablename__ = "listing_search_configs"
+
+    hash_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("listings.hash_id"), primary_key=True
+    )
+    search_config_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("search_configs.id"), primary_key=True
+    )
+
+
+class ListingDistance(Base):
+    __tablename__ = "listing_distances"
+
+    hash_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("listings.hash_id"), primary_key=True
+    )
+    search_config_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("search_configs.id"), primary_key=True
+    )
+    travel_mode: Mapped[str] = mapped_column(Text, nullable=False)
+    distance_m: Mapped[int] = mapped_column(Integer, nullable=False)
+    duration_s: Mapped[int] = mapped_column(Integer, nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

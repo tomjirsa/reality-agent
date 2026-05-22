@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from shared.config import settings
 from shared.db import SessionLocal
-from shared.models import Listing, ListingPriceHistory, SearchConfig, ScrapeRun
+from shared.models import Listing, ListingPriceHistory, SearchConfig, ScrapeRun, ListingSearchConfig
 from scraper.search import search_all
 from scraper.detail import fetch_detail
 
@@ -44,6 +44,14 @@ def finish_scrape_run(
     run.status = "error" if error else "success"
     run.error_message = error
     db.commit()
+
+
+def _record_config_link(db: Session, hash_id: int, search_config_id: int) -> None:
+    exists = db.query(ListingSearchConfig).filter_by(
+        hash_id=hash_id, search_config_id=search_config_id
+    ).first()
+    if not exists:
+        db.add(ListingSearchConfig(hash_id=hash_id, search_config_id=search_config_id))
 
 
 def upsert_listings(
@@ -92,6 +100,7 @@ def upsert_listings(
                 existing.price_czk = d["price_czk"]
                 existing.price_per_m2 = d["price_per_m2"]
                 stats["updated"] += 1
+        _record_config_link(db, d["hash_id"], config.id)
     db.commit()
     return stats
 
@@ -176,12 +185,21 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
         logger.exception("Scrape failed for config %s", config.name)
 
 
-def scrape_all_configs() -> None:
+def run_pipeline() -> None:
     db = SessionLocal()
     try:
         configs = db.query(SearchConfig).filter_by(active=True).all()
         for config in configs:
             run_scrape(db, config)
+        if settings.mapy_api_key:
+            from enricher.main import enrich_all_configs
+            enrich_all_configs(db, settings.mapy_api_key)
+        try:
+            httpx.post(f"{settings.analyzer_url}/run", timeout=30)
+        except Exception:
+            logger.exception("Failed to trigger analyzer after pipeline")
+    except Exception:
+        logger.exception("Pipeline failed")
     finally:
         db.close()
 
@@ -190,7 +208,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     scheduler = BlockingScheduler()
     scheduler.add_job(
-        scrape_all_configs,
+        run_pipeline,
         "interval",
         hours=settings.scrape_interval_hours,
         next_run_time=datetime.now(),

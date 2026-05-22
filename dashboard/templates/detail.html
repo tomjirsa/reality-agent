@@ -34,6 +34,24 @@
       <tr><td>Combined score</td><td><strong>{{ "{:.1f}".format(score.combined_score or 0) }}/100</strong></td></tr>
     </table>
     {% endif %}
+    {% if distances %}
+    <h5 class="mt-3">Travel distances</h5>
+    <table class="table table-sm">
+      <thead>
+        <tr><th>Search</th><th>Mode</th><th>Distance</th><th>Duration</th></tr>
+      </thead>
+      <tbody>
+        {% for dist, config in distances %}
+        <tr>
+          <td>{{ config.name }}</td>
+          <td>{{ dist.travel_mode }}</td>
+          <td>{{ "{:.1f}".format(dist.distance_m / 1000) }} km</td>
+          <td>{{ dist.duration_s // 60 }} min</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
     <a href="{{ sreality_url(listing) }}"
        target="_blank" class="btn btn-primary">View on sreality.cz</a>
   </div>

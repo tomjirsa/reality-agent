@@ -39,4 +39,5 @@ packages = [
     {include = "scraper"},
     {include = "analyzer"},
     {include = "dashboard"},
+    {include = "enricher"},
 ]
