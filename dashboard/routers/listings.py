@@ -33,7 +33,7 @@ def listings_feed(
     if search_config_id:
         query = (
             db.query(Listing, ListingScore, ListingDistance)
-            .join(ListingScore, Listing.hash_id == ListingScore.hash_id)
+            .outerjoin(ListingScore, Listing.hash_id == ListingScore.hash_id)
             .join(
                 ListingSearchConfig,
                 and_(
@@ -53,7 +53,7 @@ def listings_feed(
     else:
         query = (
             db.query(Listing, ListingScore)
-            .join(ListingScore, Listing.hash_id == ListingScore.hash_id)
+            .outerjoin(ListingScore, Listing.hash_id == ListingScore.hash_id)
             .filter(Listing.is_active == True)
         )
 
@@ -73,9 +73,9 @@ def listings_feed(
     total = query.count()
 
     if order_by == "distance" and search_config_id:
-        query = query.order_by(ListingDistance.distance_m.asc())
+        query = query.order_by(ListingDistance.distance_m.asc().nulls_last())
     else:
-        query = query.order_by(ListingScore.combined_score.desc())
+        query = query.order_by(ListingScore.combined_score.desc().nulls_last())
 
     raw = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
 

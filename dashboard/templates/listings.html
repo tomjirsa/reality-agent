@@ -78,7 +78,7 @@
       <td>{% if score %}{{ "{:.0f}".format(score.price_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ "{:.0f}".format(score.price_per_m2_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ score.days_on_market }}{% endif %}</td>
-      <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% endif %}</td>
+      <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% else %}<span class="badge bg-secondary">pending</span>{% endif %}</td>
       {% if filters.search_config_id %}
       <td>
         {% if distance %}

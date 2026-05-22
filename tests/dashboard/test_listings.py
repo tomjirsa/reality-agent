@@ -211,3 +211,38 @@ def test_listing_detail_no_distances_hides_section(client, session):
     resp = client.get("/listing/7011")
     assert resp.status_code == 200
     assert "Travel distances" not in resp.text
+
+
+def _add_listing_without_score(session, hash_id, price):
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=hash_id,
+        name=f"Byt {hash_id}",
+        price_czk=price,
+        area_m2=80,
+        price_per_m2=price / 80,
+        locality="Praha 2",
+        locality_district_id=5007,
+        category_main_cb=1,
+        category_type_cb=1,
+        is_active=True,
+        first_seen_at=now,
+        last_seen_at=now,
+    )
+    session.add(listing)
+    session.commit()
+
+
+def test_unscored_listing_appears_with_pending_badge(client, session):
+    _add_listing_without_score(session, hash_id=6001, price=3_000_000)
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "Byt 6001" in resp.text
+    assert "pending" in resp.text
+
+
+def test_unscored_listing_excluded_by_min_score_filter(client, session):
+    _add_listing_without_score(session, hash_id=6002, price=3_000_000)
+    resp = client.get("/?min_score=50")
+    assert resp.status_code == 200
+    assert "Byt 6002" not in resp.text
