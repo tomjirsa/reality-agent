@@ -10,6 +10,7 @@ from shared.config import settings
 from shared.db import get_db
 from shared.models import SearchConfig
 from dashboard.deps import templates
+from enricher.client import geocode
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -41,7 +42,27 @@ def create_config(
     usable_area_max: str = Form(None),
     ownership: str = Form(None),
     no_auction: bool = Form(True),
+    destination_address: str = Form(None),
+    travel_mode: str = Form(None),
 ):
+    destination_label = None
+    destination_lat = None
+    destination_lon = None
+
+    if destination_address:
+        coords = geocode(destination_address, settings.mapy_api_key)
+        if coords is None:
+            return HTMLResponse(
+                content=(
+                    f"<p>Could not geocode destination: <em>{destination_address}</em>. "
+                    "Please check the address and try again.</p>"
+                    "<p><a href='/configs'>← Go back</a></p>"
+                ),
+                status_code=422,
+            )
+        destination_lat, destination_lon = coords
+        destination_label = destination_address
+
     district_value = "|".join(locality_district_id) if locality_district_id else None
     config = SearchConfig(
         name=name,
@@ -58,6 +79,10 @@ def create_config(
         no_auction=no_auction,
         active=True,
         created_at=datetime.now(UTC),
+        destination_label=destination_label,
+        destination_lat=destination_lat,
+        destination_lon=destination_lon,
+        travel_mode=travel_mode or None,
     )
     db.add(config)
     db.commit()

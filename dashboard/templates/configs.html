@@ -11,7 +11,7 @@
 <table class="table table-sm mb-4">
   <thead>
     <tr>
-      <th>ID</th><th>Name</th><th>Category</th><th>District</th><th>Layouts/Types</th><th>Price range</th><th>Active</th><th>Actions</th>
+      <th>ID</th><th>Name</th><th>Category</th><th>District</th><th>Layouts/Types</th><th>Price range</th><th>Destination</th><th>Travel mode</th><th>Active</th><th>Actions</th>
     </tr>
   </thead>
   <tbody>
@@ -27,6 +27,8 @@
           {{ "{:,}".format(config.czk_price_min or 0) }} – {{ "{:,}".format(config.czk_price_max or 0) }} CZK
         {% else %}Any{% endif %}
       </td>
+      <td>{{ config.destination_label or "—" }}</td>
+      <td>{{ config.travel_mode or "—" }}</td>
       <td>{% if config.active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-secondary">Paused</span>{% endif %}</td>
       <td>
         <form method="post" action="/configs/{{ config.id }}/toggle" class="d-inline">
@@ -249,6 +251,24 @@
   <div class="col-md-2">
     <label class="form-label fw-semibold">Max area (m²)</label>
     <input type="number" name="usable_area_max" class="form-control" placeholder="e.g. 120">
+  </div>
+
+  <div class="col-md-8">
+    <label class="form-label fw-semibold">Destination address</label>
+    <input type="text" name="destination_address" class="form-control"
+           placeholder="e.g. Václavské náměstí 1, Praha">
+    <div class="form-text">Leave empty to skip travel distance enrichment for this search.</div>
+  </div>
+
+  <div class="col-md-4">
+    <label class="form-label fw-semibold">Travel mode</label>
+    <select name="travel_mode" class="form-select">
+      <option value="">— none —</option>
+      <option value="car">Car</option>
+      <option value="walk">Walk</option>
+      <option value="bike">Bike</option>
+      <option value="transit">Public transit</option>
+    </select>
   </div>
 
   <div class="col-12">
