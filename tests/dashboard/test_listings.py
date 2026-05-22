@@ -180,3 +180,34 @@ def test_listings_feed_no_filter_hides_distance_column(client, session):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "Distance" not in resp.text
+
+
+def test_listing_detail_shows_travel_distance(client, session):
+    config = _add_config_with_dest(session, name="DetailConfig")
+    add_listing_with_score(session, hash_id=7010, price=5_000_000)
+    session.add(ListingSearchConfig(hash_id=7010, search_config_id=config.id))
+    session.add(ListingDistance(
+        hash_id=7010,
+        search_config_id=config.id,
+        travel_mode="car",
+        distance_m=5200,
+        duration_s=900,
+        computed_at=datetime.now(UTC),
+    ))
+    session.commit()
+
+    resp = client.get("/listing/7010")
+    assert resp.status_code == 200
+    assert "Travel distances" in resp.text
+    assert "DetailConfig" in resp.text
+    assert "5.2" in resp.text   # 5200m shown as 5.2 km
+    assert "15" in resp.text    # 900s shown as 15 min
+
+
+def test_listing_detail_no_distances_hides_section(client, session):
+    add_listing_with_score(session, hash_id=7011, price=5_000_000)
+    session.commit()
+
+    resp = client.get("/listing/7011")
+    assert resp.status_code == 200
+    assert "Travel distances" not in resp.text
