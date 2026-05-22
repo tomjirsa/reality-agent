@@ -17,21 +17,27 @@ router = APIRouter()
 def listings_feed(
     request: Request,
     db: Session = Depends(get_db),
-    search_config_id: int | None = None,
-    category_main_cb: int | None = None,
-    locality_district_id: int | None = None,
-    min_price: int | None = None,
-    max_price: int | None = None,
-    min_score: float | None = None,
+    search_config_id: str | None = None,
+    category_main_cb: str | None = None,
+    locality_district_id: str | None = None,
+    min_price: str | None = None,
+    max_price: str | None = None,
+    min_score: str | None = None,
     hot_only: bool = False,
     status: str = "active",
     order_by: str | None = None,
     page: int = 1,
 ):
     PAGE_SIZE = 50
+    sc_id = int(search_config_id) if search_config_id else None
+    cat_cb = int(category_main_cb) if category_main_cb else None
+    dist_id = int(locality_district_id) if locality_district_id else None
+    min_p = int(min_price) if min_price else None
+    max_p = int(max_price) if max_price else None
+    min_s = float(min_score) if min_score else None
     configs = db.query(SearchConfig).order_by(SearchConfig.name).all()
 
-    if search_config_id:
+    if sc_id:
         query = (
             db.query(Listing, ListingScore, ListingDistance)
             .outerjoin(ListingScore, Listing.hash_id == ListingScore.hash_id)
@@ -39,14 +45,14 @@ def listings_feed(
                 ListingSearchConfig,
                 and_(
                     ListingSearchConfig.hash_id == Listing.hash_id,
-                    ListingSearchConfig.search_config_id == search_config_id,
+                    ListingSearchConfig.search_config_id == sc_id,
                 ),
             )
             .outerjoin(
                 ListingDistance,
                 and_(
                     ListingDistance.hash_id == Listing.hash_id,
-                    ListingDistance.search_config_id == search_config_id,
+                    ListingDistance.search_config_id == sc_id,
                 ),
             )
         )
@@ -61,29 +67,29 @@ def listings_feed(
     elif status == "inactive":
         query = query.filter(Listing.is_active == False)
 
-    if category_main_cb is not None:
-        query = query.filter(Listing.category_main_cb == category_main_cb)
-    if locality_district_id is not None:
-        query = query.filter(Listing.locality_district_id == locality_district_id)
-    if min_price is not None:
-        query = query.filter(Listing.price_czk >= min_price)
-    if max_price is not None:
-        query = query.filter(Listing.price_czk <= max_price)
-    if min_score is not None:
-        query = query.filter(ListingScore.combined_score >= min_score)
+    if cat_cb is not None:
+        query = query.filter(Listing.category_main_cb == cat_cb)
+    if dist_id is not None:
+        query = query.filter(Listing.locality_district_id == dist_id)
+    if min_p is not None:
+        query = query.filter(Listing.price_czk >= min_p)
+    if max_p is not None:
+        query = query.filter(Listing.price_czk <= max_p)
+    if min_s is not None:
+        query = query.filter(ListingScore.combined_score >= min_s)
     if hot_only:
         query = query.filter(ListingScore.is_hot == True)
 
     total = query.count()
 
-    if order_by == "distance" and search_config_id:
+    if order_by == "distance" and sc_id:
         query = query.order_by(ListingDistance.distance_m.asc().nulls_last())
     else:
         query = query.order_by(ListingScore.combined_score.desc().nulls_last())
 
     raw = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
 
-    if search_config_id:
+    if sc_id:
         listings = raw
     else:
         listings = [(lst, score, None) for lst, score in raw]
@@ -98,12 +104,12 @@ def listings_feed(
             "page_size": PAGE_SIZE,
             "configs": configs,
             "filters": {
-                "search_config_id": search_config_id,
-                "category_main_cb": category_main_cb,
-                "locality_district_id": locality_district_id,
-                "min_price": min_price,
-                "max_price": max_price,
-                "min_score": min_score,
+                "search_config_id": sc_id,
+                "category_main_cb": cat_cb,
+                "locality_district_id": dist_id,
+                "min_price": min_p,
+                "max_price": max_p,
+                "min_score": min_s,
                 "hot_only": hot_only,
                 "status": status,
                 "order_by": order_by,
