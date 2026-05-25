@@ -56,6 +56,7 @@
   <thead>
     <tr>
       <th>Name</th>
+      <th>City</th>
       {{ sort_th("Price", "price") }}
       {{ sort_th("Price/m²", "price_m2") }}
       {{ sort_th("Price pct", "price_pct") }}
@@ -77,6 +78,7 @@
         {% endif %}
         {{ listing.name }}
       </td>
+      <td>{{ listing.locality or '—' }}</td>
       <td>{{ "{:,}".format(listing.price_czk or 0).replace(",", " ") }}</td>
       <td>{{ "{:,.0f}".format(listing.price_per_m2 or 0) }}</td>
       <td>{% if score %}{{ "{:.0f}".format(score.price_percentile or 0) }}th{% endif %}</td>
