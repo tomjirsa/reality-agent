@@ -45,7 +45,7 @@ Existing listings in the DB will have these fields as `NULL` until their detail 
 
 ## 2. New signals in `listing_scores`
 
-Eight new nullable columns added to `listing_scores`. All are computed in `analyzer/signals.py` (`compute_signals`):
+Nine new nullable columns added to `listing_scores`. All are computed in `analyzer/signals.py` (`compute_signals`):
 
 | Column | Type | Description |
 |---|---|---|
@@ -104,7 +104,7 @@ New `scoring_weights` JSON column on `search_configs` (nullable; defaults applie
   "condition_price_pct":  0.10,
   "energy_score":         0.05,
   "building_type_score":  0.05,
-  "floor_elevator":       0.05,
+  "floor_elevator_penalty": 0.05,
   "drop_recency":         0.05,
   "market_delta":         0.10,
   "land_pct":             0.05
@@ -125,6 +125,7 @@ Each signal is normalised to 0–100 before weighting:
 - `floor_elevator_penalty`: mapped from [−20, 0] to [0, 100]
 - `drop_recency_days`: inverted decay — 0 days = 100, 90+ days = 0 (linear)
 - `market_delta_pct`: negative (cheaper than market) = high score; clamped to ±30%
+- `land_pct` weight applies to `combined_area_price_pct` (the primary house signal); `land_price_percentile` is stored for display but not separately weighted
 
 ---
 
