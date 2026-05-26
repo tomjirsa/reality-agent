@@ -123,3 +123,65 @@ def test_inactive_listings_excluded(db):
     compute_signals(db)
     score = db.query(ListingScore).filter_by(hash_id=5052).first()
     assert score is None
+
+
+def add_listing_with_condition(db, hash_id, price, condition, area=80, district=5007):
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=hash_id,
+        name=f"Listing {hash_id}",
+        price_czk=price,
+        area_m2=area,
+        price_per_m2=price / area,
+        condition=condition,
+        category_main_cb=1,
+        category_type_cb=1,
+        locality_district_id=district,
+        is_active=True,
+        first_seen_at=now - timedelta(days=5),
+        last_seen_at=now,
+    )
+    db.add(listing)
+    db.flush()
+    return listing
+
+
+def test_condition_score_excellent(db):
+    add_config(db)
+    add_listing_with_condition(db, 6001, 4_000_000, "Novostavba")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=6001).one()
+    assert score.condition_score == 5.0
+
+
+def test_condition_score_good(db):
+    add_config(db)
+    add_listing_with_condition(db, 6002, 4_000_000, "Velmi dobrý")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=6002).one()
+    assert score.condition_score == 4.0
+
+
+def test_condition_score_none_when_unknown(db):
+    add_config(db)
+    add_listing(db, hash_id=6003, price=4_000_000)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=6003).one()
+    assert score.condition_score is None
+
+
+def test_condition_price_pct_lower_for_cheaper_in_same_condition(db):
+    add_config(db)
+    add_listing_with_condition(db, 6011, 3_000_000, "Dobrý")
+    add_listing_with_condition(db, 6012, 5_000_000, "Dobrý")
+    add_listing_with_condition(db, 6013, 7_000_000, "Dobrý")
+    db.commit()
+    compute_signals(db)
+    scores = {s.hash_id: s for s in db.query(ListingScore).filter(
+        ListingScore.hash_id.in_([6011, 6012, 6013])
+    ).all()}
+    assert scores[6011].condition_price_pct < scores[6012].condition_price_pct
+    assert scores[6012].condition_price_pct < scores[6013].condition_price_pct

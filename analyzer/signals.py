@@ -8,6 +8,28 @@ from shared.models import Listing, ListingPriceHistory, ListingScore
 
 UTC = timezone.utc
 
+CONDITION_SCORES: dict[str, float] = {
+    "Novostavba": 5.0,
+    "Po rekonstrukci": 5.0,
+    "Ve výstavbě": 4.0,
+    "Velmi dobrý": 4.0,
+    "Dobrý": 3.0,
+    "Před rekonstrukcí": 2.0,
+    "Špatný": 1.0,
+    "Demolice": 0.0,
+}
+
+CONDITION_BUCKETS: dict[str, str] = {
+    "Novostavba": "excellent",
+    "Po rekonstrukci": "excellent",
+    "Ve výstavbě": "good",
+    "Velmi dobrý": "good",
+    "Dobrý": "good",
+    "Před rekonstrukcí": "poor",
+    "Špatný": "poor",
+    "Demolice": "poor",
+}
+
 
 def _first_price(db: Session, hash_id: int) -> Optional[int]:
     row = (
@@ -39,6 +61,32 @@ def compute_signals(db: Session) -> None:
     rows = db.execute(percentile_sql).fetchall()
     percentiles = {r[0]: (r[1], r[2]) for r in rows}
 
+    condition_pct_sql = text("""
+        SELECT
+            hash_id,
+            PERCENT_RANK() OVER (
+                PARTITION BY
+                    CASE condition
+                        WHEN 'Novostavba'       THEN 'excellent'
+                        WHEN 'Po rekonstrukci'  THEN 'excellent'
+                        WHEN 'Ve výstavbě'      THEN 'good'
+                        WHEN 'Velmi dobrý'      THEN 'good'
+                        WHEN 'Dobrý'            THEN 'good'
+                        WHEN 'Před rekonstrukcí' THEN 'poor'
+                        WHEN 'Špatný'           THEN 'poor'
+                        WHEN 'Demolice'         THEN 'poor'
+                        ELSE NULL
+                    END,
+                    category_main_cb,
+                    category_type_cb,
+                    locality_district_id
+                ORDER BY price_per_m2
+            ) * 100 AS condition_price_pct
+        FROM listings
+        WHERE is_active = TRUE AND condition IS NOT NULL AND price_per_m2 IS NOT NULL
+    """)
+    condition_pcts = {r[0]: r[1] for r in db.execute(condition_pct_sql).fetchall()}
+
     active_listings = db.query(Listing).filter_by(is_active=True).all()
 
     for listing in active_listings:
@@ -52,26 +100,27 @@ def compute_signals(db: Session) -> None:
         days_on_market = (now.replace(tzinfo=None) - first_seen).days
 
         price_pct, ppm2_pct = percentiles.get(listing.hash_id, (None, None))
+        cond_score = CONDITION_SCORES.get(listing.condition) if listing.condition else None
+        cond_pct = condition_pcts.get(listing.hash_id)
 
         existing = db.query(ListingScore).filter_by(hash_id=listing.hash_id).first()
         if existing is None:
-            score = ListingScore(
+            score_obj = ListingScore(
                 hash_id=listing.hash_id,
-                price_percentile=price_pct,
-                price_per_m2_percentile=ppm2_pct,
-                days_on_market=days_on_market,
-                had_price_drop=had_price_drop,
-                price_drop_pct=price_drop_pct,
                 is_hot=False,
                 computed_at=now,
             )
-            db.add(score)
+            db.add(score_obj)
         else:
-            existing.price_percentile = price_pct
-            existing.price_per_m2_percentile = ppm2_pct
-            existing.days_on_market = days_on_market
-            existing.had_price_drop = had_price_drop
-            existing.price_drop_pct = price_drop_pct
-            existing.computed_at = now
+            score_obj = existing
+            score_obj.computed_at = now
+
+        score_obj.price_percentile = price_pct
+        score_obj.price_per_m2_percentile = ppm2_pct
+        score_obj.days_on_market = days_on_market
+        score_obj.had_price_drop = had_price_drop
+        score_obj.price_drop_pct = price_drop_pct
+        score_obj.condition_score = cond_score
+        score_obj.condition_price_pct = cond_pct
 
     db.commit()
