@@ -108,3 +108,100 @@ def test_parse_detail_price_per_m2_none_if_no_area():
     response["items"] = []
     result = parse_detail(response, hash_id=HASH_ID)
     assert result["price_per_m2"] is None
+
+
+FULL_DETAIL_RESPONSE = {
+    "name": "Prodej bytu 3+kk, 80 m²",
+    "price_czk": {"value_raw": 5_900_000, "name": "Celková cena", "value": "5 900 000", "unit": ""},
+    "is_new": False,
+    "locality": {"name": "Adresa", "value": "Praha 2 - Vinohrady, Blanická", "accuracy": "address"},
+    "locality_district_id": 5007,
+    "items": [
+        {"name": "Užitná ploch", "value": "80"},
+        {"name": "Podlaží", "value": "5. podlaží z 7"},
+        {"name": "Stavba", "value": "Cihlová"},
+        {"name": "Stav objektu", "value": "Velmi dobrý"},
+        {"name": "Vlastnictví", "value": "Osobní"},
+        {"name": "Energetická náročnost budovy", "value": "B"},
+        {"name": "Výtah", "value": "Ano"},
+        {"name": "Balkón", "value": "8 m²"},
+        {"name": "Garáž", "value": "Ano"},
+        {"name": "Sklep", "value": "Ano"},
+        {"name": "Rok výstavby", "value": "1998"},
+    ],
+}
+
+HOUSE_DETAIL_RESPONSE = {
+    "name": "Prodej rodinného domu 180 m²",
+    "price_czk": {"value_raw": 8_500_000, "name": "Celková cena", "value": "8 500 000", "unit": ""},
+    "is_new": False,
+    "locality": {"name": "Adresa", "value": "Brno - Líšeň", "accuracy": "address"},
+    "locality_district_id": 6202,
+    "items": [
+        {"name": "Užitná ploch", "value": "180"},
+        {"name": "Stavba", "value": "Cihlová"},
+        {"name": "Stav objektu", "value": "Dobrý"},
+        {"name": "Vlastnictví", "value": "Osobní"},
+        {"name": "Plocha pozemku", "value": "650"},
+    ],
+}
+
+
+def test_parse_detail_extracts_energy_class():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["energy_class"] == "B"
+
+
+def test_parse_detail_extracts_elevator_true():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["has_elevator"] is True
+
+
+def test_parse_detail_extracts_outdoor_space_from_balcony():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["has_outdoor_space"] is True
+
+
+def test_parse_detail_extracts_parking():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["has_parking"] is True
+
+
+def test_parse_detail_extracts_cellar():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["has_cellar"] is True
+
+
+def test_parse_detail_extracts_year_built():
+    result = parse_detail(FULL_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["year_built"] == 1998
+
+
+def test_parse_detail_extracts_land_area():
+    result = parse_detail(HOUSE_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["land_area_m2"] == 650
+
+
+def test_parse_detail_new_fields_none_when_absent():
+    result = parse_detail(SAMPLE_DETAIL_RESPONSE, hash_id=HASH_ID)
+    assert result["energy_class"] is None
+    assert result["has_elevator"] is None
+    assert result["has_outdoor_space"] is None
+    assert result["has_parking"] is None
+    assert result["has_cellar"] is None
+    assert result["year_built"] is None
+    assert result["land_area_m2"] is None
+
+
+def test_parse_detail_outdoor_space_from_loggia():
+    response = dict(FULL_DETAIL_RESPONSE)
+    response["items"] = [{"name": "Lodžie", "value": "5 m²"}]
+    result = parse_detail(response, hash_id=HASH_ID)
+    assert result["has_outdoor_space"] is True
+
+
+def test_parse_detail_elevator_false_when_ne():
+    response = dict(FULL_DETAIL_RESPONSE)
+    response["items"] = [{"name": "Výtah", "value": "Ne"}]
+    result = parse_detail(response, hash_id=HASH_ID)
+    assert result["has_elevator"] is False

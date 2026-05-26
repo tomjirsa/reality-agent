@@ -33,6 +33,12 @@ def _parse_area(value: Optional[str]) -> Optional[int]:
     return int(match.group(1)) if match else None
 
 
+def _parse_bool(value: Optional[str]) -> Optional[bool]:
+    if value is None:
+        return None
+    return value.strip().lower() in ("ano", "yes", "true", "1")
+
+
 def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
     items = data.get("items", [])
 
@@ -62,6 +68,17 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
     name_raw = data.get("name", "")
     name = name_raw.get("value", "") if isinstance(name_raw, dict) else name_raw
 
+    has_elevator_raw = extract_item_value(items, "Výtah")
+    outdoor_raw = (
+        extract_item_value(items, "Balkón")
+        or extract_item_value(items, "Lodžie")
+        or extract_item_value(items, "Terasa")
+    )
+    parking_raw = (
+        extract_item_value(items, "Garáž")
+        or extract_item_value(items, "Parkovací místo")
+    )
+
     return {
         "hash_id": hash_id,
         "name": name,
@@ -79,6 +96,13 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
         "condition": extract_item_value(items, "Stav objektu"),
         "ownership": extract_item_value(items, "Vlastnictví"),
         "is_new_flag": bool(data.get("is_new", False)),
+        "energy_class": extract_item_value(items, "Energetická náročnost budovy"),
+        "has_elevator": _parse_bool(has_elevator_raw),
+        "has_outdoor_space": True if outdoor_raw is not None else None,
+        "has_parking": True if parking_raw is not None else None,
+        "has_cellar": _parse_bool(extract_item_value(items, "Sklep")),
+        "year_built": _parse_area(extract_item_value(items, "Rok výstavby")),
+        "land_area_m2": _parse_area(extract_item_value(items, "Plocha pozemku")),
         "raw_json": data,
     }
 
