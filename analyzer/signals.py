@@ -60,6 +60,20 @@ def _floor_elevator_penalty(floor_str: Optional[str], has_elevator: Optional[boo
     return max(-20.0, -5.0 * (floor_num - 3))
 
 
+def _drop_recency_days(db: Session, hash_id: int, now: datetime) -> Optional[int]:
+    history = (
+        db.query(ListingPriceHistory)
+        .filter_by(hash_id=hash_id)
+        .order_by(ListingPriceHistory.recorded_at.desc())
+        .all()
+    )
+    for i in range(len(history) - 1):
+        if history[i].price_czk < history[i + 1].price_czk:
+            drop_at = history[i].recorded_at.replace(tzinfo=None)
+            return (now.replace(tzinfo=None) - drop_at).days
+    return None
+
+
 def _first_price(db: Session, hash_id: int) -> Optional[int]:
     row = (
         db.query(ListingPriceHistory)
@@ -154,5 +168,6 @@ def compute_signals(db: Session) -> None:
         score_obj.energy_score = ENERGY_SCORES.get(listing.energy_class) if listing.energy_class else None
         score_obj.floor_elevator_penalty = _floor_elevator_penalty(listing.floor, listing.has_elevator)
         score_obj.building_type_score = BUILDING_TYPE_SCORES.get(listing.building_type) if listing.building_type else None
+        score_obj.drop_recency_days = _drop_recency_days(db, listing.hash_id, now)
 
     db.commit()

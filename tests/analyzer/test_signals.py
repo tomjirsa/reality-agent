@@ -282,3 +282,51 @@ def test_building_type_score_panel_is_2(db):
     compute_signals(db)
     score = db.query(ListingScore).filter_by(hash_id=7022).one()
     assert score.building_type_score == 2.0
+
+
+def test_drop_recency_days_reflects_most_recent_drop(db):
+    add_config(db)
+    add_listing(db, hash_id=8001, price=3_800_000, days_ago=30)
+    db.add(ListingPriceHistory(
+        hash_id=8001, price_czk=4_200_000, price_per_m2=4_200_000/80,
+        recorded_at=datetime.now(UTC) - timedelta(days=30),
+    ))
+    db.add(ListingPriceHistory(
+        hash_id=8001, price_czk=4_000_000, price_per_m2=4_000_000/80,
+        recorded_at=datetime.now(UTC) - timedelta(days=10),
+    ))
+    db.add(ListingPriceHistory(
+        hash_id=8001, price_czk=3_800_000, price_per_m2=3_800_000/80,
+        recorded_at=datetime.now(UTC) - timedelta(days=3),
+    ))
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=8001).one()
+    assert score.drop_recency_days is not None
+    assert 3 <= score.drop_recency_days <= 4
+
+
+def test_drop_recency_days_none_when_no_history(db):
+    add_config(db)
+    add_listing(db, hash_id=8002, price=4_000_000, days_ago=10)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=8002).one()
+    assert score.drop_recency_days is None
+
+
+def test_drop_recency_days_none_when_price_never_dropped(db):
+    add_config(db)
+    add_listing(db, hash_id=8003, price=4_500_000, days_ago=20)
+    db.add(ListingPriceHistory(
+        hash_id=8003, price_czk=4_000_000, price_per_m2=50_000.0,
+        recorded_at=datetime.now(UTC) - timedelta(days=20),
+    ))
+    db.add(ListingPriceHistory(
+        hash_id=8003, price_czk=4_500_000, price_per_m2=56_250.0,
+        recorded_at=datetime.now(UTC) - timedelta(days=5),
+    ))
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=8003).one()
+    assert score.drop_recency_days is None
