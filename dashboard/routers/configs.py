@@ -2,8 +2,8 @@ import logging
 from datetime import datetime, timezone
 
 import httpx
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from shared.config import settings
@@ -126,3 +126,14 @@ def trigger_analysis():
     except Exception:
         logger.exception("Failed to trigger analysis")
     return RedirectResponse(url="/configs", status_code=303)
+
+
+@router.post("/config/{config_id}/weights")
+async def update_weights(config_id: int, request: Request, db: Session = Depends(get_db)):
+    config = db.query(SearchConfig).filter_by(id=config_id).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Config not found")
+    body = await request.json()
+    config.scoring_weights = body
+    db.commit()
+    return JSONResponse({"status": "ok"})

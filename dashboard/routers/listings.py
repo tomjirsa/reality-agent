@@ -9,6 +9,7 @@ from shared.models import (
     ListingSearchConfig, SearchConfig,
 )
 from dashboard.deps import templates
+from dashboard.scoring import compute_live_score, DEFAULT_WEIGHTS
 
 router = APIRouter()
 
@@ -102,6 +103,21 @@ def listings_feed(
     raw = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
     listings = raw if sc_id else [(lst, score, None) for lst, score in raw]
 
+    weights = {}
+    if sc_id:
+        config_obj = db.query(SearchConfig).filter_by(id=sc_id).first()
+        if config_obj and config_obj.scoring_weights:
+            weights = config_obj.scoring_weights
+    if not weights:
+        weights = DEFAULT_WEIGHTS
+
+    # Compute live scores for each listing
+    live_scores = {}
+    for item in listings:
+        lst, score, distance = item
+        live_score = compute_live_score(score, weights)
+        live_scores[lst.hash_id] = live_score
+
     # Query string for sort links (all filters except order params)
     qs_parts = []
     if sc_id:         qs_parts.append(f"search_config_id={sc_id}")
@@ -119,12 +135,15 @@ def listings_feed(
         "listings.html",
         {
             "listings": listings,
+            "live_scores": live_scores,
             "total": total,
             "page": page,
             "page_size": PAGE_SIZE,
             "configs": configs,
             "filter_qs": filter_qs,
             "has_distance_col": bool(sc_id),
+            "weights": weights,
+            "default_weights": DEFAULT_WEIGHTS,
             "filters": {
                 "search_config_id": sc_id,
                 "category_main_cb": cat_cb,
