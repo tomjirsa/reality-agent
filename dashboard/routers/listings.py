@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -40,9 +42,9 @@ def listings_feed(
     order_by: str = "score",
     order_dir: str = "desc",
     page: int = 1,
-    condition: str | None = None,
-    energy_class: str | None = None,
-    building_type: str | None = None,
+    condition: List[str] = Query(default=[]),
+    energy_class: List[str] = Query(default=[]),
+    building_type: List[str] = Query(default=[]),
     has_parking: str | None = None,
     has_outdoor_space: str | None = None,
 ):
@@ -98,11 +100,11 @@ def listings_feed(
     if hot_only:
         query = query.filter(ListingScore.is_hot == True)
     if condition:
-        query = query.filter(Listing.condition == condition)
+        query = query.filter(Listing.condition.in_(condition))
     if energy_class:
-        query = query.filter(Listing.energy_class == energy_class)
+        query = query.filter(Listing.energy_class.in_(energy_class))
     if building_type:
-        query = query.filter(Listing.building_type == building_type)
+        query = query.filter(Listing.building_type.in_(building_type))
     if has_parking == "true":
         query = query.filter(Listing.has_parking == True)
     elif has_parking == "false":
@@ -146,9 +148,9 @@ def listings_feed(
     if max_p:         qs_parts.append(f"max_price={max_p}")
     if min_s:         qs_parts.append(f"min_score={min_s}")
     if hot_only:            qs_parts.append("hot_only=1")
-    if condition:           qs_parts.append(f"condition={condition}")
-    if energy_class:        qs_parts.append(f"energy_class={energy_class}")
-    if building_type:       qs_parts.append(f"building_type={building_type}")
+    for v in condition:     qs_parts.append(f"condition={v}")
+    for v in energy_class:  qs_parts.append(f"energy_class={v}")
+    for v in building_type: qs_parts.append(f"building_type={v}")
     if has_parking:         qs_parts.append(f"has_parking={has_parking}")
     if has_outdoor_space:   qs_parts.append(f"has_outdoor_space={has_outdoor_space}")
     qs_parts.append(f"status={status}")
