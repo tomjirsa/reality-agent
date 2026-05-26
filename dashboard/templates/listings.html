@@ -99,6 +99,82 @@
 })();
 </script>
 
+{% if filters.search_config_id %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span class="fw-semibold small">Score weights</span>
+    <button class="btn btn-sm btn-link p-0" type="button"
+            data-bs-toggle="collapse" data-bs-target="#weightsPanel">
+      Toggle
+    </button>
+  </div>
+  <div class="collapse" id="weightsPanel">
+    <div class="card-body">
+      <div class="row g-2" id="weightsForm">
+        {% set weight_labels = [
+          ("price_pct","Price pct"),("price_m2_pct","Price/m² pct"),
+          ("condition_price_pct","Condition pct"),("energy_score","Energy"),
+          ("building_type_score","Building"),("floor_elevator_penalty","Floor/Elev"),
+          ("drop_recency","Drop recency"),("market_delta","Market delta"),
+          ("land_pct","Land pct")
+        ] %}
+        {% for key, label in weight_labels %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <label class="form-label small mb-0">{{ label }}</label>
+          <div class="d-flex align-items-center gap-1">
+            <input type="range" class="form-range weight-slider" min="0" max="100" step="1"
+                   id="w_{{ key }}" data-key="{{ key }}"
+                   value="{{ (weights.get(key, default_weights.get(key, 0)) * 100) | int }}">
+            <span class="small text-muted" id="wv_{{ key }}">
+              {{ (weights.get(key, default_weights.get(key, 0)) * 100) | int }}%
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-2 d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-primary" id="saveWeights">Save</button>
+        <span class="small text-muted" id="weightsSum"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function updateSum() {
+    var total = 0;
+    document.querySelectorAll(".weight-slider").forEach(function(s) {
+      total += parseInt(s.value, 10);
+      document.getElementById("wv_" + s.dataset.key).textContent = s.value + "%";
+    });
+    document.getElementById("weightsSum").textContent = "Sum: " + total + "%";
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    updateSum();
+    document.querySelectorAll(".weight-slider").forEach(function(s) {
+      s.addEventListener("input", updateSum);
+    });
+
+    document.getElementById("saveWeights").addEventListener("click", function() {
+      var weights = {};
+      document.querySelectorAll(".weight-slider").forEach(function(s) {
+        weights[s.dataset.key] = parseInt(s.value, 10) / 100.0;
+      });
+      fetch("/config/{{ filters.search_config_id }}/weights", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(weights),
+      }).then(function(r) {
+        if (r.ok) { window.location.reload(); }
+      });
+    });
+  });
+})();
+</script>
+{% endif %}
+
 <table class="table table-sm table-hover">
   {% macro sort_th(label, col) %}
     {% set next_dir = 'asc' if filters.order_by == col and filters.order_dir == 'desc' else 'desc' %}
