@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime, timezone, timedelta
-from shared.models import SearchConfig, Listing, ListingPriceHistory, ListingScore
+from shared.models import SearchConfig, Listing, ListingPriceHistory, ListingScore, MarketSnapshot
 from analyzer.signals import compute_signals
 
 UTC = timezone.utc
@@ -330,3 +330,82 @@ def test_drop_recency_days_none_when_price_never_dropped(db):
     compute_signals(db)
     score = db.query(ListingScore).filter_by(hash_id=8003).one()
     assert score.drop_recency_days is None
+
+
+def add_snapshot(db, median_m2, cat_main=1, cat_type=1, district=5007, days_ago=1):
+    db.add(MarketSnapshot(
+        snapshot_at=datetime.now(UTC) - timedelta(days=days_ago),
+        category_main_cb=cat_main,
+        category_type_cb=cat_type,
+        locality_district_id=district,
+        listing_count=10,
+        median_price_m2=median_m2,
+        avg_price_m2=median_m2,
+        p25_price_m2=median_m2 * 0.8,
+        p75_price_m2=median_m2 * 1.2,
+    ))
+    db.flush()
+
+
+def test_market_delta_pct_negative_when_cheaper_than_historical(db):
+    add_config(db)
+    add_snapshot(db, median_m2=80_000.0)
+    add_listing(db, hash_id=10001, price=4_800_000, area=80)  # 60_000/m2 vs 80_000 median
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=10001).one()
+    assert score.market_delta_pct is not None
+    assert score.market_delta_pct < 0
+
+
+def test_market_delta_pct_none_when_no_snapshots(db):
+    add_config(db)
+    add_listing(db, hash_id=10002, price=4_000_000, area=80)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=10002).one()
+    assert score.market_delta_pct is None
+
+
+def add_listing_with_land(db, hash_id, price, area_m2, land_area_m2, district=5007):
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=hash_id,
+        name=f"House {hash_id}",
+        price_czk=price,
+        area_m2=area_m2,
+        price_per_m2=price / area_m2,
+        land_area_m2=land_area_m2,
+        category_main_cb=2,
+        category_type_cb=1,
+        locality_district_id=district,
+        is_active=True,
+        first_seen_at=now - timedelta(days=5),
+        last_seen_at=now,
+    )
+    db.add(listing)
+    db.flush()
+
+
+def test_land_price_percentile_lower_for_cheaper_land(db):
+    add_config(db)
+    add_listing_with_land(db, 10011, 5_000_000, 150, 500)   # 10_000/m2 land
+    add_listing_with_land(db, 10012, 7_000_000, 150, 500)   # 14_000/m2 land
+    add_listing_with_land(db, 10013, 9_000_000, 150, 500)   # 18_000/m2 land
+    db.commit()
+    compute_signals(db)
+    scores = {s.hash_id: s for s in db.query(ListingScore).filter(
+        ListingScore.hash_id.in_([10011, 10012, 10013])
+    ).all()}
+    assert scores[10011].land_price_percentile < scores[10012].land_price_percentile
+    assert scores[10012].land_price_percentile < scores[10013].land_price_percentile
+
+
+def test_land_percentile_none_for_apartments(db):
+    add_config(db)
+    add_listing(db, hash_id=10021, price=4_000_000)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=10021).one()
+    assert score.land_price_percentile is None
+    assert score.combined_area_price_pct is None

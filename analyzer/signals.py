@@ -1,11 +1,13 @@
 import re
-from datetime import datetime, timezone
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from statistics import median as py_median
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from shared.models import Listing, ListingPriceHistory, ListingScore
+from shared.models import Listing, ListingPriceHistory, ListingScore, MarketSnapshot
 
 UTC = timezone.utc
 
@@ -130,6 +132,41 @@ def compute_signals(db: Session) -> None:
     """)
     condition_pcts = {r[0]: r[1] for r in db.execute(condition_pct_sql).fetchall()}
 
+    # Historical market medians (9-month window)
+    nine_months_ago = now - timedelta(days=270)
+    snap_rows = (
+        db.query(
+            MarketSnapshot.category_main_cb,
+            MarketSnapshot.category_type_cb,
+            MarketSnapshot.locality_district_id,
+            MarketSnapshot.median_price_m2,
+        )
+        .filter(MarketSnapshot.snapshot_at >= nine_months_ago)
+        .all()
+    )
+    snap_buckets: dict[tuple, list[float]] = defaultdict(list)
+    for r in snap_rows:
+        if r.median_price_m2 is not None:
+            snap_buckets[(r.category_main_cb, r.category_type_cb, r.locality_district_id)].append(r.median_price_m2)
+    historical_medians = {k: py_median(v) for k, v in snap_buckets.items()}
+
+    # Land percentiles
+    land_pct_sql = text("""
+        SELECT
+            hash_id,
+            PERCENT_RANK() OVER (
+                PARTITION BY category_main_cb, category_type_cb, locality_district_id
+                ORDER BY CAST(price_czk AS REAL) / NULLIF(land_area_m2, 0)
+            ) * 100 AS land_price_percentile,
+            PERCENT_RANK() OVER (
+                PARTITION BY category_main_cb, category_type_cb, locality_district_id
+                ORDER BY CAST(price_czk AS REAL) / NULLIF(area_m2 + 0.15 * land_area_m2, 0)
+            ) * 100 AS combined_area_price_pct
+        FROM listings
+        WHERE is_active = TRUE AND land_area_m2 IS NOT NULL AND land_area_m2 > 0
+    """)
+    land_pcts = {r[0]: (r[1], r[2]) for r in db.execute(land_pct_sql).fetchall()}
+
     active_listings = db.query(Listing).filter_by(is_active=True).all()
 
     for listing in active_listings:
@@ -169,5 +206,16 @@ def compute_signals(db: Session) -> None:
         score_obj.floor_elevator_penalty = _floor_elevator_penalty(listing.floor, listing.has_elevator)
         score_obj.building_type_score = BUILDING_TYPE_SCORES.get(listing.building_type) if listing.building_type else None
         score_obj.drop_recency_days = _drop_recency_days(db, listing.hash_id, now)
+
+        bucket_key = (listing.category_main_cb, listing.category_type_cb, listing.locality_district_id)
+        hist_median = historical_medians.get(bucket_key)
+        if hist_median and listing.price_per_m2:
+            score_obj.market_delta_pct = (listing.price_per_m2 - hist_median) / hist_median * 100
+        else:
+            score_obj.market_delta_pct = None
+
+        land_pct_val, combined_pct_val = land_pcts.get(listing.hash_id, (None, None))
+        score_obj.land_price_percentile = land_pct_val
+        score_obj.combined_area_price_pct = combined_pct_val
 
     db.commit()
