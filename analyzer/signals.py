@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -29,6 +30,34 @@ CONDITION_BUCKETS: dict[str, str] = {
     "Špatný": "poor",
     "Demolice": "poor",
 }
+
+ENERGY_SCORES: dict[str, float] = {
+    "A": 5.0, "B": 4.0, "C": 3.0, "D": 2.0, "E": 1.0, "F": 0.5, "G": 0.0,
+}
+
+BUILDING_TYPE_SCORES: dict[str, float] = {
+    "Cihlová": 5.0, "Kamenná": 5.0,
+    "Smíšená": 3.0,
+    "Panelová": 2.0, "Dřevostavba": 2.0, "Skelet": 2.0,
+}
+
+
+def _parse_floor_number(floor_str: Optional[str]) -> Optional[int]:
+    if not floor_str:
+        return None
+    if "přízemí" in floor_str.lower():
+        return 0
+    match = re.search(r"(\d+)\.", floor_str)
+    return int(match.group(1)) if match else None
+
+
+def _floor_elevator_penalty(floor_str: Optional[str], has_elevator: Optional[bool]) -> float:
+    if has_elevator:
+        return 0.0
+    floor_num = _parse_floor_number(floor_str)
+    if floor_num is None or floor_num <= 3:
+        return 0.0
+    return max(-20.0, -5.0 * (floor_num - 3))
 
 
 def _first_price(db: Session, hash_id: int) -> Optional[int]:
@@ -122,5 +151,8 @@ def compute_signals(db: Session) -> None:
         score_obj.price_drop_pct = price_drop_pct
         score_obj.condition_score = cond_score
         score_obj.condition_price_pct = cond_pct
+        score_obj.energy_score = ENERGY_SCORES.get(listing.energy_class) if listing.energy_class else None
+        score_obj.floor_elevator_penalty = _floor_elevator_penalty(listing.floor, listing.has_elevator)
+        score_obj.building_type_score = BUILDING_TYPE_SCORES.get(listing.building_type) if listing.building_type else None
 
     db.commit()

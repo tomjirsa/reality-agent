@@ -185,3 +185,100 @@ def test_condition_price_pct_lower_for_cheaper_in_same_condition(db):
     ).all()}
     assert scores[6011].condition_price_pct < scores[6012].condition_price_pct
     assert scores[6012].condition_price_pct < scores[6013].condition_price_pct
+
+
+def add_listing_with_attrs(db, hash_id, price, energy_class=None,
+                            floor=None, has_elevator=None, building_type=None, area=80):
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=hash_id,
+        name=f"Listing {hash_id}",
+        price_czk=price,
+        area_m2=area,
+        price_per_m2=price / area,
+        energy_class=energy_class,
+        floor=floor,
+        has_elevator=has_elevator,
+        building_type=building_type,
+        category_main_cb=1,
+        category_type_cb=1,
+        locality_district_id=5007,
+        is_active=True,
+        first_seen_at=now - timedelta(days=5),
+        last_seen_at=now,
+    )
+    db.add(listing)
+    db.flush()
+    return listing
+
+
+def test_energy_score_A_is_5(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7001, 4_000_000, energy_class="A")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7001).one()
+    assert score.energy_score == 5.0
+
+
+def test_energy_score_G_is_0(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7002, 4_000_000, energy_class="G")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7002).one()
+    assert score.energy_score == 0.0
+
+
+def test_energy_score_none_when_absent(db):
+    add_config(db)
+    add_listing(db, hash_id=7003, price=4_000_000)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7003).one()
+    assert score.energy_score is None
+
+
+def test_floor_elevator_penalty_zero_with_elevator(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7011, 4_000_000, floor="5. podlaží z 7", has_elevator=True)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7011).one()
+    assert score.floor_elevator_penalty == 0.0
+
+
+def test_floor_elevator_penalty_negative_high_floor_no_elevator(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7012, 4_000_000, floor="5. podlaží z 7", has_elevator=False)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7012).one()
+    assert score.floor_elevator_penalty == -10.0  # (5-3) * -5
+
+
+def test_floor_elevator_penalty_capped_at_minus_20(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7013, 4_000_000, floor="9. podlaží z 10", has_elevator=False)
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7013).one()
+    assert score.floor_elevator_penalty == -20.0
+
+
+def test_building_type_score_brick_is_5(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7021, 4_000_000, building_type="Cihlová")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7021).one()
+    assert score.building_type_score == 5.0
+
+
+def test_building_type_score_panel_is_2(db):
+    add_config(db)
+    add_listing_with_attrs(db, 7022, 4_000_000, building_type="Panelová")
+    db.commit()
+    compute_signals(db)
+    score = db.query(ListingScore).filter_by(hash_id=7022).one()
+    assert score.building_type_score == 2.0
