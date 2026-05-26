@@ -45,6 +45,45 @@
     <button class="btn btn-sm btn-primary" type="submit">Filter</button>
     <a class="btn btn-sm btn-outline-secondary" href="/">Reset</a>
   </div>
+  <div class="w-100"></div>
+  <div class="col-auto">
+    <select name="condition" class="form-select form-select-sm">
+      <option value="">Any condition</option>
+      {% for v in ["Novostavba","Po rekonstrukci","Ve výstavbě","Velmi dobrý","Dobrý","Před rekonstrukcí","Špatný"] %}
+      <option value="{{ v }}" {% if filters.condition == v %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="energy_class" class="form-select form-select-sm">
+      <option value="">Any energy</option>
+      {% for v in ["A","B","C","D","E","F","G"] %}
+      <option value="{{ v }}" {% if filters.energy_class == v %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="building_type" class="form-select form-select-sm">
+      <option value="">Any building</option>
+      {% for v in ["Cihlová","Kamenná","Smíšená","Panelová","Dřevostavba","Skelet"] %}
+      <option value="{{ v }}" {% if filters.building_type == v %}selected{% endif %}>{{ v }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="has_parking" class="form-select form-select-sm">
+      <option value="">Parking: any</option>
+      <option value="true" {% if filters.has_parking == "true" %}selected{% endif %}>Parking: yes</option>
+      <option value="false" {% if filters.has_parking == "false" %}selected{% endif %}>Parking: no</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="has_outdoor_space" class="form-select form-select-sm">
+      <option value="">Outdoor: any</option>
+      <option value="true" {% if filters.has_outdoor_space == "true" %}selected{% endif %}>Outdoor: yes</option>
+      <option value="false" {% if filters.has_outdoor_space == "false" %}selected{% endif %}>Outdoor: no</option>
+    </select>
+  </div>
 </form>
 
 <div class="d-flex justify-content-end mb-2">

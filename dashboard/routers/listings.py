@@ -40,6 +40,11 @@ def listings_feed(
     order_by: str = "score",
     order_dir: str = "desc",
     page: int = 1,
+    condition: str | None = None,
+    energy_class: str | None = None,
+    building_type: str | None = None,
+    has_parking: str | None = None,
+    has_outdoor_space: str | None = None,
 ):
     PAGE_SIZE = 50
     sc_id = int(search_config_id) if search_config_id else None
@@ -92,6 +97,20 @@ def listings_feed(
         query = query.filter(ListingScore.combined_score >= min_s)
     if hot_only:
         query = query.filter(ListingScore.is_hot == True)
+    if condition:
+        query = query.filter(Listing.condition == condition)
+    if energy_class:
+        query = query.filter(Listing.energy_class == energy_class)
+    if building_type:
+        query = query.filter(Listing.building_type == building_type)
+    if has_parking == "true":
+        query = query.filter(Listing.has_parking == True)
+    elif has_parking == "false":
+        query = query.filter(Listing.has_parking == False)
+    if has_outdoor_space == "true":
+        query = query.filter(Listing.has_outdoor_space == True)
+    elif has_outdoor_space == "false":
+        query = query.filter(Listing.has_outdoor_space == False)
 
     total = query.count()
 
@@ -126,7 +145,12 @@ def listings_feed(
     if min_p:         qs_parts.append(f"min_price={min_p}")
     if max_p:         qs_parts.append(f"max_price={max_p}")
     if min_s:         qs_parts.append(f"min_score={min_s}")
-    if hot_only:      qs_parts.append("hot_only=1")
+    if hot_only:            qs_parts.append("hot_only=1")
+    if condition:           qs_parts.append(f"condition={condition}")
+    if energy_class:        qs_parts.append(f"energy_class={energy_class}")
+    if building_type:       qs_parts.append(f"building_type={building_type}")
+    if has_parking:         qs_parts.append(f"has_parking={has_parking}")
+    if has_outdoor_space:   qs_parts.append(f"has_outdoor_space={has_outdoor_space}")
     qs_parts.append(f"status={status}")
     filter_qs = "&".join(qs_parts)
 
@@ -155,6 +179,11 @@ def listings_feed(
                 "status": status,
                 "order_by": col_key,
                 "order_dir": order_dir,
+                "condition": condition,
+                "energy_class": energy_class,
+                "building_type": building_type,
+                "has_parking": has_parking,
+                "has_outdoor_space": has_outdoor_space,
             },
         },
     )
