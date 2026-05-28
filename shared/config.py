@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     postgres_url: str = "postgresql://user:pass@db:5432/reality"
     analyzer_url: str = "http://analyzer:8081"
+    scraper_url: str = "http://scraper:8082"
 
     smtp_host: str = "smtp.gmail.com"
     smtp_port: int = 587

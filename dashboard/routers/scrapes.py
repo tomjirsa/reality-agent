@@ -1,5 +1,5 @@
-import threading
 from datetime import datetime, timedelta, timezone
+import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -60,6 +60,8 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/scrapes/run")
 def trigger_run():
-    from scraper.main import run_pipeline
-    threading.Thread(target=run_pipeline, daemon=True).start()
+    try:
+        httpx.post(f"{settings.scraper_url}/run", timeout=5)
+    except Exception:
+        pass
     return RedirectResponse("/scrapes?triggered=1", status_code=303)

@@ -1,8 +1,11 @@
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import httpx
-from apscheduler.schedulers.blocking import BlockingScheduler
+import uvicorn
+from apscheduler.schedulers.background import BackgroundScheduler
+from fastapi import BackgroundTasks, FastAPI
 from sqlalchemy.orm import Session
 
 from shared.config import settings
@@ -220,14 +223,31 @@ def run_pipeline() -> None:
         db.close()
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    scheduler = BlockingScheduler()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    scheduler = BackgroundScheduler()
     scheduler.add_job(
         run_pipeline,
         "interval",
         hours=settings.scrape_interval_hours,
         next_run_time=datetime.now(),
+        id="scrape",
     )
-    logger.info("Scraper starting, interval=%dh", settings.scrape_interval_hours)
     scheduler.start()
+    logger.info("Scraper starting, interval=%dh", settings.scrape_interval_hours)
+    yield
+    scheduler.shutdown()
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.post("/run")
+def trigger_run(background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_pipeline)
+    return {"status": "triggered"}
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    uvicorn.run("scraper.main:app", host="0.0.0.0", port=8082, log_level="info")

@@ -21,6 +21,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8082/docs')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
     restart: unless-stopped
 
   analyzer:
@@ -51,6 +56,8 @@ services:
       db:
         condition: service_healthy
       analyzer:
+        condition: service_healthy
+      scraper:
         condition: service_healthy
     restart: unless-stopped
 
