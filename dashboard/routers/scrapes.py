@@ -1,6 +1,7 @@
+import threading
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from shared.config import settings
@@ -55,3 +56,10 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
         "now": datetime.now(UTC),
         "interval_hours": settings.scrape_interval_hours,
     })
+
+
+@router.post("/scrapes/run")
+def trigger_run():
+    from scraper.main import run_pipeline
+    threading.Thread(target=run_pipeline, daemon=True).start()
+    return RedirectResponse("/scrapes?triggered=1", status_code=303)

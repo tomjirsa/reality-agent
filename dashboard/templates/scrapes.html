@@ -1,7 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Scrape Log{% endblock %}
 {% block content %}
-<h2>Scrape Log</h2>
+<div class="d-flex align-items-center justify-content-between mb-2">
+  <h2 class="mb-0">Scrape Log</h2>
+  <form method="post" action="/scrapes/run">
+    <button type="submit" class="btn btn-primary btn-sm">Run now</button>
+  </form>
+</div>
+
+{% if request.query_params.get('triggered') %}
+  <div class="alert alert-success alert-dismissible fade show" role="alert">
+    Scrape pipeline triggered — check back in a moment for new results.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+{% endif %}
 
 {% if next_run %}
   {% set overdue = now > next_run %}
