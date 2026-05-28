@@ -64,7 +64,8 @@ def browser_client():
         page = context.new_page()
 
         logger.info("Establishing Sreality browser session...")
-        page.goto("https://www.sreality.cz/", wait_until="networkidle", timeout=60000)
+        page.goto("https://www.sreality.cz/", wait_until="load", timeout=60000)
+        page.wait_for_timeout(2000)  # let JS set cookies after page load
         logger.info("Browser session established")
 
         try:
