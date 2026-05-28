@@ -1,6 +1,9 @@
+import logging
 import httpx
 from typing import Any
 from shared.models import SearchConfig
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.sreality.cz/api/cs/v2/estates"
 PER_PAGE = 20
@@ -46,6 +49,9 @@ def search_page(
 ) -> tuple[list[dict], int]:
     params = build_search_params(config, from_offset)
     resp = client.get(BASE_URL, params=params, headers=HEADERS, timeout=30)
+    if resp.status_code == 404:
+        logger.info("Search returned 404 (no results) for params %s", params)
+        return [], 0
     resp.raise_for_status()
     data = resp.json()
     estates = data.get("_embedded", {}).get("estates", [])
