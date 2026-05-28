@@ -182,7 +182,7 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
                     )
                     db.commit()
 
-            removed = detect_removals(db, config, current_hash_ids)
+            removed = detect_removals(db, config, current_hash_ids) if current_hash_ids else 0
 
         finish_scrape_run(
             db, run,
