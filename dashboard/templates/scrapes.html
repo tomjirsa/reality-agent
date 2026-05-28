@@ -3,6 +3,18 @@
 {% block content %}
 <h2>Scrape Log</h2>
 
+{% if next_run %}
+  {% set overdue = now > next_run %}
+  <p class="text-muted mb-3">
+    Interval: every {{ interval_hours }}h &nbsp;·&nbsp;
+    {% if overdue %}
+      <span class="text-warning">Next run: overdue (scheduled {{ next_run.strftime('%Y-%m-%d %H:%M') }} UTC)</span>
+    {% else %}
+      Next run: <strong>{{ next_run.strftime('%Y-%m-%d %H:%M') }} UTC</strong>
+    {% endif %}
+  </p>
+{% endif %}
+
 {% if not groups %}
   <p class="text-muted">No scrape runs recorded yet.</p>
 {% else %}

@@ -1,12 +1,16 @@
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from shared.config import settings
 from shared.db import get_db
 from shared.models import ScrapeRun, SearchConfig
 from dashboard.deps import templates
 
 router = APIRouter()
+
+UTC = timezone.utc
 
 
 def group_runs(rows: list[tuple]) -> list[dict]:
@@ -39,4 +43,15 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
         .all()
     )
     groups = group_runs(rows)
-    return templates.TemplateResponse(request, "scrapes.html", {"groups": groups})
+
+    last_run = db.query(ScrapeRun).order_by(ScrapeRun.started_at.desc()).first()
+    next_run = None
+    if last_run:
+        next_run = last_run.started_at + timedelta(hours=settings.scrape_interval_hours)
+
+    return templates.TemplateResponse(request, "scrapes.html", {
+        "groups": groups,
+        "next_run": next_run,
+        "now": datetime.now(UTC),
+        "interval_hours": settings.scrape_interval_hours,
+    })
