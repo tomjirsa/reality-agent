@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
@@ -9,6 +11,7 @@ from shared.models import (
     ListingSearchConfig, SearchConfig,
 )
 from dashboard.deps import templates
+from dashboard.scoring import compute_live_score, DEFAULT_WEIGHTS
 
 router = APIRouter()
 
@@ -39,6 +42,11 @@ def listings_feed(
     order_by: str = "score",
     order_dir: str = "desc",
     page: int = 1,
+    condition: List[str] = Query(default=[]),
+    energy_class: List[str] = Query(default=[]),
+    building_type: List[str] = Query(default=[]),
+    has_parking: str | None = None,
+    has_outdoor_space: str | None = None,
 ):
     PAGE_SIZE = 50
     sc_id = int(search_config_id) if search_config_id else None
@@ -91,6 +99,20 @@ def listings_feed(
         query = query.filter(ListingScore.combined_score >= min_s)
     if hot_only:
         query = query.filter(ListingScore.is_hot == True)
+    if condition:
+        query = query.filter(Listing.condition.in_(condition))
+    if energy_class:
+        query = query.filter(Listing.energy_class.in_(energy_class))
+    if building_type:
+        query = query.filter(Listing.building_type.in_(building_type))
+    if has_parking == "true":
+        query = query.filter(Listing.has_parking == True)
+    elif has_parking == "false":
+        query = query.filter(Listing.has_parking == False)
+    if has_outdoor_space == "true":
+        query = query.filter(Listing.has_outdoor_space == True)
+    elif has_outdoor_space == "false":
+        query = query.filter(Listing.has_outdoor_space == False)
 
     total = query.count()
 
@@ -102,6 +124,21 @@ def listings_feed(
     raw = query.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
     listings = raw if sc_id else [(lst, score, None) for lst, score in raw]
 
+    weights = {}
+    if sc_id:
+        config_obj = db.query(SearchConfig).filter_by(id=sc_id).first()
+        if config_obj and config_obj.scoring_weights:
+            weights = config_obj.scoring_weights
+    if not weights:
+        weights = DEFAULT_WEIGHTS
+
+    # Compute live scores for each listing
+    live_scores = {}
+    for item in listings:
+        lst, score, distance = item
+        live_score = compute_live_score(score, weights)
+        live_scores[lst.hash_id] = live_score
+
     # Query string for sort links (all filters except order params)
     qs_parts = []
     if sc_id:         qs_parts.append(f"search_config_id={sc_id}")
@@ -110,7 +147,12 @@ def listings_feed(
     if min_p:         qs_parts.append(f"min_price={min_p}")
     if max_p:         qs_parts.append(f"max_price={max_p}")
     if min_s:         qs_parts.append(f"min_score={min_s}")
-    if hot_only:      qs_parts.append("hot_only=1")
+    if hot_only:            qs_parts.append("hot_only=1")
+    for v in condition:     qs_parts.append(f"condition={v}")
+    for v in energy_class:  qs_parts.append(f"energy_class={v}")
+    for v in building_type: qs_parts.append(f"building_type={v}")
+    if has_parking:         qs_parts.append(f"has_parking={has_parking}")
+    if has_outdoor_space:   qs_parts.append(f"has_outdoor_space={has_outdoor_space}")
     qs_parts.append(f"status={status}")
     filter_qs = "&".join(qs_parts)
 
@@ -119,12 +161,15 @@ def listings_feed(
         "listings.html",
         {
             "listings": listings,
+            "live_scores": live_scores,
             "total": total,
             "page": page,
             "page_size": PAGE_SIZE,
             "configs": configs,
             "filter_qs": filter_qs,
             "has_distance_col": bool(sc_id),
+            "weights": weights,
+            "default_weights": DEFAULT_WEIGHTS,
             "filters": {
                 "search_config_id": sc_id,
                 "category_main_cb": cat_cb,
@@ -136,6 +181,11 @@ def listings_feed(
                 "status": status,
                 "order_by": col_key,
                 "order_dir": order_dir,
+                "condition": condition,
+                "energy_class": energy_class,
+                "building_type": building_type,
+                "has_parking": has_parking,
+                "has_outdoor_space": has_outdoor_space,
             },
         },
     )

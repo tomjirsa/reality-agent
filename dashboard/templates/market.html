@@ -3,7 +3,7 @@
 {% block content %}
 <h2>Market Overview</h2>
 
-<table class="table table-sm table-hover">
+<table class="table table-sm table-hover mb-4">
   <thead>
     <tr>
       <th>District ID</th>
@@ -29,4 +29,59 @@
     {% endfor %}
   </tbody>
 </table>
+
+<h4 class="mt-4">Price/m² trends (12 months)</h4>
+<div id="chartsContainer" class="row g-3"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+fetch("/market/snapshots").then(r => r.json()).then(function(data) {
+  const container = document.getElementById("chartsContainer");
+  Object.entries(data).forEach(function([key, points]) {
+    if (points.length < 2) return;
+    const col = document.createElement("div");
+    col.className = "col-12 col-md-6 col-lg-4";
+    const canvas = document.createElement("canvas");
+    col.appendChild(canvas);
+    container.appendChild(col);
+
+    const labels = points.map(p => p.t.substring(0, 10));
+    new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Median price/m²",
+            data: points.map(p => p.median),
+            borderColor: "#0d6efd",
+            backgroundColor: "transparent",
+            tension: 0.3,
+          },
+          {
+            label: "P25",
+            data: points.map(p => p.p25),
+            borderColor: "#adb5bd",
+            borderDash: [4,4],
+            backgroundColor: "transparent",
+            tension: 0.3,
+          },
+          {
+            label: "P75",
+            data: points.map(p => p.p75),
+            borderColor: "#adb5bd",
+            borderDash: [4,4],
+            backgroundColor: "transparent",
+            tension: 0.3,
+          },
+        ]
+      },
+      options: {
+        plugins: { title: { display: true, text: key } },
+        scales: { y: { beginAtZero: false } },
+      }
+    });
+  });
+});
+</script>
 {% endblock %}

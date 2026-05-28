@@ -1,13 +1,16 @@
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from shared.db import get_db
-from shared.models import Listing
+from shared.models import Listing, MarketSnapshot
 from dashboard.deps import templates
 
 router = APIRouter()
+
+UTC = timezone.utc
 
 
 @router.get("/market", response_class=HTMLResponse)
@@ -46,3 +49,26 @@ def market_overview(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         request, "market.html", {"summary": summary}
     )
+
+
+@router.get("/market/snapshots")
+def market_snapshots(db: Session = Depends(get_db)):
+    cutoff = datetime.now(UTC) - timedelta(days=365)
+    rows = (
+        db.query(MarketSnapshot)
+        .filter(MarketSnapshot.snapshot_at >= cutoff)
+        .order_by(MarketSnapshot.snapshot_at.asc())
+        .all()
+    )
+    result: dict[str, list] = {}
+    for r in rows:
+        key = f"{r.category_main_cb}_{r.category_type_cb}_{r.locality_district_id}"
+        if key not in result:
+            result[key] = []
+        result[key].append({
+            "t": r.snapshot_at.isoformat(),
+            "median": r.median_price_m2,
+            "p25": r.p25_price_m2,
+            "p75": r.p75_price_m2,
+        })
+    return JSONResponse(result)

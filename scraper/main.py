@@ -82,6 +82,13 @@ def upsert_listings(
                 first_seen_at=now,
                 last_seen_at=now,
                 raw_json=d["raw_json"],
+                energy_class=d.get("energy_class"),
+                has_elevator=d.get("has_elevator"),
+                has_outdoor_space=d.get("has_outdoor_space"),
+                has_parking=d.get("has_parking"),
+                has_cellar=d.get("has_cellar"),
+                year_built=d.get("year_built"),
+                land_area_m2=d.get("land_area_m2"),
             )
             db.add(listing)
             stats["new"] += 1
@@ -89,6 +96,13 @@ def upsert_listings(
             existing.last_seen_at = now
             existing.is_active = True
             existing.raw_json = d["raw_json"]
+            existing.energy_class = d.get("energy_class")
+            existing.has_elevator = d.get("has_elevator")
+            existing.has_outdoor_space = d.get("has_outdoor_space")
+            existing.has_parking = d.get("has_parking")
+            existing.has_cellar = d.get("has_cellar")
+            existing.year_built = d.get("year_built")
+            existing.land_area_m2 = d.get("land_area_m2")
             if existing.price_czk != d["price_czk"]:
                 history = ListingPriceHistory(
                     hash_id=existing.hash_id,

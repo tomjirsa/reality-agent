@@ -17,8 +17,13 @@ def test_engine():
 
 @pytest.fixture
 def db(test_engine):
+    from shared.models import Base
     Session = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
     session = Session()
+    # Clear all tables before the test
+    for table in reversed(Base.metadata.sorted_tables):
+        session.execute(table.delete())
+    session.commit()
     yield session
     session.rollback()
     session.close()

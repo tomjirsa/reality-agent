@@ -31,6 +31,8 @@ class SearchConfig(Base):
     destination_lat: Mapped[Optional[float]] = mapped_column(Float)
     destination_lon: Mapped[Optional[float]] = mapped_column(Float)
     travel_mode: Mapped[Optional[str]] = mapped_column(Text)
+    scoring_weights: Mapped[Optional[dict]] = mapped_column(JSON)
+    alert_thresholds: Mapped[Optional[dict]] = mapped_column(JSON)
 
 
 class Listing(Base):
@@ -52,6 +54,13 @@ class Listing(Base):
     category_type_cb: Mapped[int] = mapped_column(Integer, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_new_flag: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    energy_class: Mapped[Optional[str]] = mapped_column(Text)
+    has_elevator: Mapped[Optional[bool]] = mapped_column(Boolean)
+    has_outdoor_space: Mapped[Optional[bool]] = mapped_column(Boolean)
+    has_parking: Mapped[Optional[bool]] = mapped_column(Boolean)
+    has_cellar: Mapped[Optional[bool]] = mapped_column(Boolean)
+    year_built: Mapped[Optional[int]] = mapped_column(Integer)
+    land_area_m2: Mapped[Optional[int]] = mapped_column(Integer)
     first_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     last_seen_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     removed_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
@@ -85,6 +94,15 @@ class ListingScore(Base):
     is_hot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     combined_score: Mapped[Optional[float]] = mapped_column(Float)
     alerted_at: Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True))
+    condition_score: Mapped[Optional[float]] = mapped_column(Float)
+    condition_price_pct: Mapped[Optional[float]] = mapped_column(Float)
+    energy_score: Mapped[Optional[float]] = mapped_column(Float)
+    floor_elevator_penalty: Mapped[Optional[float]] = mapped_column(Float)
+    building_type_score: Mapped[Optional[float]] = mapped_column(Float)
+    drop_recency_days: Mapped[Optional[int]] = mapped_column(Integer)
+    market_delta_pct: Mapped[Optional[float]] = mapped_column(Float)
+    land_price_percentile: Mapped[Optional[float]] = mapped_column(Float)
+    combined_area_price_pct: Mapped[Optional[float]] = mapped_column(Float)
     computed_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
 
@@ -129,3 +147,18 @@ class ListingDistance(Base):
     distance_m: Mapped[int] = mapped_column(Integer, nullable=False)
     duration_s: Mapped[int] = mapped_column(Integer, nullable=False)
     computed_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class MarketSnapshot(Base):
+    __tablename__ = "market_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    category_main_cb: Mapped[int] = mapped_column(Integer, nullable=False)
+    category_type_cb: Mapped[int] = mapped_column(Integer, nullable=False)
+    locality_district_id: Mapped[Optional[int]] = mapped_column(Integer)
+    listing_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    median_price_m2: Mapped[Optional[float]] = mapped_column(Float)
+    avg_price_m2: Mapped[Optional[float]] = mapped_column(Float)
+    p25_price_m2: Mapped[Optional[float]] = mapped_column(Float)
+    p75_price_m2: Mapped[Optional[float]] = mapped_column(Float)

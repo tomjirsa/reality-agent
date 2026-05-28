@@ -45,7 +45,207 @@
     <button class="btn btn-sm btn-primary" type="submit">Filter</button>
     <a class="btn btn-sm btn-outline-secondary" href="/">Reset</a>
   </div>
+  <div class="w-100"></div>
+  <div class="col-auto">
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+              data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        Condition{% if filters.condition %} ({{ filters.condition|length }}){% endif %}
+      </button>
+      <ul class="dropdown-menu p-2" style="min-width:190px">
+        {% for v in ["Novostavba","Po rekonstrukci","Ve výstavbě","Velmi dobrý","Dobrý","Před rekonstrukcí","Špatný"] %}
+        <li>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="condition" value="{{ v }}"
+                   id="cond_{{ loop.index }}" {% if v in filters.condition %}checked{% endif %}>
+            <label class="form-check-label small" for="cond_{{ loop.index }}">{{ v }}</label>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-auto">
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+              data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        Energy{% if filters.energy_class %} ({{ filters.energy_class|length }}){% endif %}
+      </button>
+      <ul class="dropdown-menu p-2" style="min-width:120px">
+        {% for v in ["A","B","C","D","E","F","G"] %}
+        <li>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="energy_class" value="{{ v }}"
+                   id="energy_{{ loop.index }}" {% if v in filters.energy_class %}checked{% endif %}>
+            <label class="form-check-label small" for="energy_{{ loop.index }}">{{ v }}</label>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-auto">
+    <div class="dropdown">
+      <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+              data-bs-toggle="dropdown" data-bs-auto-close="outside">
+        Building{% if filters.building_type %} ({{ filters.building_type|length }}){% endif %}
+      </button>
+      <ul class="dropdown-menu p-2" style="min-width:150px">
+        {% for v in ["Cihlová","Kamenná","Smíšená","Panelová","Dřevostavba","Skelet"] %}
+        <li>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="building_type" value="{{ v }}"
+                   id="btype_{{ loop.index }}" {% if v in filters.building_type %}checked{% endif %}>
+            <label class="form-check-label small" for="btype_{{ loop.index }}">{{ v }}</label>
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-auto">
+    <select name="has_parking" class="form-select form-select-sm">
+      <option value="">Parking: any</option>
+      <option value="true" {% if filters.has_parking == "true" %}selected{% endif %}>Parking: yes</option>
+      <option value="false" {% if filters.has_parking == "false" %}selected{% endif %}>Parking: no</option>
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="has_outdoor_space" class="form-select form-select-sm">
+      <option value="">Outdoor: any</option>
+      <option value="true" {% if filters.has_outdoor_space == "true" %}selected{% endif %}>Outdoor: yes</option>
+      <option value="false" {% if filters.has_outdoor_space == "false" %}selected{% endif %}>Outdoor: no</option>
+    </select>
+  </div>
 </form>
+
+<div class="d-flex justify-content-end mb-2">
+  <div class="dropdown">
+    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+            id="colToggleBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+      Columns
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width:160px">
+      {% set col_labels = [
+        ("condition","Condition"),("energy","Energy class"),
+        ("building_type","Building type"),("floor","Floor"),
+        ("parking","Parking"),("outdoor","Balcony/terrace"),("land_area","Land area")
+      ] %}
+      {% for col_key, col_label in col_labels %}
+      <li>
+        <div class="form-check">
+          <input class="form-check-input col-toggle" type="checkbox"
+                 id="toggle_{{ col_key }}" data-col="{{ col_key }}" checked>
+          <label class="form-check-label" for="toggle_{{ col_key }}">{{ col_label }}</label>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+
+<script>
+(function() {
+  const COLS = ["condition","energy","building_type","floor","parking","outdoor","land_area"];
+
+  function applyVisibility() {
+    COLS.forEach(function(col) {
+      const visible = localStorage.getItem("col_" + col) !== "false";
+      document.querySelectorAll("[data-col='" + col + "']").forEach(function(el) {
+        el.style.display = visible ? "" : "none";
+      });
+      const cb = document.getElementById("toggle_" + col);
+      if (cb) cb.checked = visible;
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    applyVisibility();
+    document.querySelectorAll(".col-toggle").forEach(function(cb) {
+      cb.addEventListener("change", function() {
+        localStorage.setItem("col_" + cb.dataset.col, cb.checked ? "true" : "false");
+        applyVisibility();
+      });
+    });
+  });
+})();
+</script>
+
+{% if filters.search_config_id %}
+<div class="card mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center py-2">
+    <span class="fw-semibold small">Score weights</span>
+    <button class="btn btn-sm btn-link p-0" type="button"
+            data-bs-toggle="collapse" data-bs-target="#weightsPanel">
+      Toggle
+    </button>
+  </div>
+  <div class="collapse" id="weightsPanel">
+    <div class="card-body">
+      <div class="row g-2" id="weightsForm">
+        {% set weight_labels = [
+          ("price_pct","Price pct"),("price_m2_pct","Price/m² pct"),
+          ("condition_price_pct","Condition pct"),("energy_score","Energy"),
+          ("building_type_score","Building"),("floor_elevator_penalty","Floor/Elev"),
+          ("drop_recency","Drop recency"),("market_delta","Market delta"),
+          ("land_pct","Land pct")
+        ] %}
+        {% for key, label in weight_labels %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <label class="form-label small mb-0">{{ label }}</label>
+          <div class="d-flex align-items-center gap-1">
+            <input type="range" class="form-range weight-slider" min="0" max="100" step="1"
+                   id="w_{{ key }}" data-key="{{ key }}"
+                   value="{{ (weights.get(key, default_weights.get(key, 0)) * 100) | int }}">
+            <span class="small text-muted" id="wv_{{ key }}">
+              {{ (weights.get(key, default_weights.get(key, 0)) * 100) | int }}%
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="mt-2 d-flex gap-2 align-items-center">
+        <button class="btn btn-sm btn-primary" id="saveWeights">Save</button>
+        <span class="small text-muted" id="weightsSum"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function updateSum() {
+    var total = 0;
+    document.querySelectorAll(".weight-slider").forEach(function(s) {
+      total += parseInt(s.value, 10);
+      document.getElementById("wv_" + s.dataset.key).textContent = s.value + "%";
+    });
+    document.getElementById("weightsSum").textContent = "Sum: " + total + "%";
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    updateSum();
+    document.querySelectorAll(".weight-slider").forEach(function(s) {
+      s.addEventListener("input", updateSum);
+    });
+
+    document.getElementById("saveWeights").addEventListener("click", function() {
+      var weights = {};
+      document.querySelectorAll(".weight-slider").forEach(function(s) {
+        weights[s.dataset.key] = parseInt(s.value, 10) / 100.0;
+      });
+      fetch("/config/{{ filters.search_config_id }}/weights", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(weights),
+      }).then(function(r) {
+        if (r.ok) { window.location.reload(); }
+      });
+    });
+  });
+})();
+</script>
+{% endif %}
 
 <table class="table table-sm table-hover">
   {% macro sort_th(label, col) %}
@@ -57,6 +257,13 @@
     <tr>
       <th>Name</th>
       <th>City</th>
+      <th data-col="condition">Condition</th>
+      <th data-col="energy">Energy</th>
+      <th data-col="building_type">Building</th>
+      <th data-col="floor">Floor</th>
+      <th data-col="parking">Park.</th>
+      <th data-col="outdoor">Balc.</th>
+      <th data-col="land_area">Land m²</th>
       {{ sort_th("Price", "price") }}
       {{ sort_th("Price/m²", "price_m2") }}
       {{ sort_th("Price pct", "price_pct") }}
@@ -79,12 +286,19 @@
         {{ listing.name }}
       </td>
       <td>{{ listing.locality or '—' }}</td>
+      <td data-col="condition">{{ listing.condition or '—' }}</td>
+      <td data-col="energy">{{ listing.energy_class or '—' }}</td>
+      <td data-col="building_type">{{ listing.building_type or '—' }}</td>
+      <td data-col="floor">{{ listing.floor or '—' }}</td>
+      <td data-col="parking">{% if listing.has_parking %}✓{% elif listing.has_parking == false %}—{% else %}?{% endif %}</td>
+      <td data-col="outdoor">{% if listing.has_outdoor_space %}✓{% elif listing.has_outdoor_space == false %}—{% else %}?{% endif %}</td>
+      <td data-col="land_area">{{ listing.land_area_m2 or '—' }}</td>
       <td>{{ "{:,}".format(listing.price_czk or 0).replace(",", " ") }}</td>
       <td>{{ "{:,.0f}".format(listing.price_per_m2 or 0) }}</td>
       <td>{% if score %}{{ "{:.0f}".format(score.price_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ "{:.0f}".format(score.price_per_m2_percentile or 0) }}th{% endif %}</td>
       <td>{% if score %}{{ score.days_on_market }}{% endif %}</td>
-      <td>{% if score %}<strong>{{ "{:.1f}".format(score.combined_score or 0) }}</strong>{% else %}<span class="badge bg-secondary">pending</span>{% endif %}</td>
+      <td>{% set live_score = live_scores.get(listing.hash_id) %}{% if live_score is not none %}<strong>{{ live_score }}</strong>{% else %}<span class="badge bg-secondary">pending</span>{% endif %}</td>
       {% if has_distance_col %}
       <td>
         {% if distance %}
@@ -105,11 +319,11 @@
 
 <div class="d-flex gap-2">
   {% if page > 1 %}
-  <a href="?page={{ page - 1 }}&search_config_id={{ filters.search_config_id or '' }}"
+  <a href="?{{ filter_qs }}&page={{ page - 1 }}"
      class="btn btn-outline-secondary btn-sm">← Previous</a>
   {% endif %}
   {% if total > page * page_size %}
-  <a href="?page={{ page + 1 }}&search_config_id={{ filters.search_config_id or '' }}"
+  <a href="?{{ filter_qs }}&page={{ page + 1 }}"
      class="btn btn-outline-secondary btn-sm">Next →</a>
   {% endif %}
 </div>
