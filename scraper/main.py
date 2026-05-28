@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from shared.config import settings
 from shared.db import SessionLocal
 from shared.models import Listing, ListingPriceHistory, SearchConfig, ScrapeRun, ListingSearchConfig
+from scraper.browser import browser_client
 from scraper.search import search_all
 from scraper.detail import fetch_detail
 
@@ -155,7 +156,7 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
     run = create_scrape_run(db, config)
     logger.info("Starting scrape for config: %s", config.name)
     try:
-        with httpx.Client() as client:
+        with browser_client() as client:
             raw_estates = search_all(client, config)
             current_hash_ids = {e["hash_id"] for e in raw_estates}
 
