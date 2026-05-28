@@ -168,6 +168,8 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
                 price = estate.get("price_czk")
                 if hid not in existing_prices or existing_prices[hid] != price:
                     detail = fetch_detail(client, hid)
+                    if detail is None:
+                        continue
                     s = upsert_listings(db, config, [detail])
                     stats["new"] += s["new"]
                     stats["updated"] += s["updated"]

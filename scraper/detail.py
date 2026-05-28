@@ -117,6 +117,9 @@ def fetch_detail(client: httpx.Client, hash_id: int) -> dict[str, Any]:
         resp = client.get(url, headers=HEADERS, timeout=30)
         if resp.status_code in (429, 503):
             continue
+        if resp.status_code in (404, 410):
+            logger.info("Listing %s is gone (%d), skipping", hash_id, resp.status_code)
+            return None
         resp.raise_for_status()
         return parse_detail(resp.json(), hash_id=hash_id)
     resp.raise_for_status()  # final raise if all retries exhausted
