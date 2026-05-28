@@ -1,12 +1,13 @@
 import uvicorn
 from fastapi import FastAPI
 
-from dashboard.routers import listings, market, configs
+from dashboard.routers import listings, market, configs, scrapes
 
 app = FastAPI(title="Reality Agent")
 app.include_router(listings.router)
 app.include_router(market.router)
 app.include_router(configs.router)
+app.include_router(scrapes.router)
 
 
 if __name__ == "__main__":

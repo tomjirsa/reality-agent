@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Scrape Log{% endblock %}
+{% block content %}
+<h2>Scrape Log</h2>
+
+{% if not groups %}
+  <p class="text-muted">No scrape runs recorded yet.</p>
+{% else %}
+<div class="accordion" id="scrapeAccordion">
+  {% for group in groups %}
+  {% set loop_id = "config-" ~ loop.index %}
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button"
+              data-bs-toggle="collapse" data-bs-target="#{{ loop_id }}">
+        {{ group.config_name }}
+        <span class="ms-2 text-muted small">{{ group.runs | length }} run{{ 's' if group.runs | length != 1 }}</span>
+        {% set last = group.runs[0] %}
+        {% if last.status == "success" %}
+          <span class="badge bg-success ms-2">success</span>
+        {% elif last.status == "error" %}
+          <span class="badge bg-danger ms-2">error</span>
+        {% else %}
+          <span class="badge bg-warning text-dark ms-2">{{ last.status }}</span>
+        {% endif %}
+      </button>
+    </h2>
+    <div id="{{ loop_id }}" class="accordion-collapse collapse">
+      <div class="accordion-body p-0">
+        <table class="table table-sm table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Timestamp</th>
+              <th>Found</th>
+              <th>New</th>
+              <th>Updated</th>
+              <th>Removed</th>
+              <th>Duration</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for run in group.runs %}
+            <tr>
+              <td>{{ run.started_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+              <td>{{ run.listings_found }}</td>
+              <td>{{ run.listings_new }}</td>
+              <td>{{ run.listings_updated }}</td>
+              <td>{{ run.listings_removed }}</td>
+              <td>{{ run.duration ~ 's' if run.duration is not none else '—' }}</td>
+              <td>
+                {% if run.status == "success" %}
+                  <span class="badge bg-success">success</span>
+                {% elif run.status == "error" %}
+                  <span class="badge bg-danger">error</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">{{ run.status }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% if run.status == "error" and run.error_message %}
+            <tr>
+              <td colspan="7" class="text-danger small ps-3">{{ run.error_message }}</td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
