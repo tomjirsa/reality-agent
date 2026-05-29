@@ -1,11 +1,10 @@
 import time
+import random
 import logging
 import httpx
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
-
-DETAIL_DELAY = 0.3
 RETRY_DELAYS = [5, 15, 30]
 
 BASE_URL = "https://www.sreality.cz/api/v1/estates"
@@ -72,7 +71,7 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
 
 def fetch_detail(client: httpx.Client, hash_id: int) -> dict[str, Any]:
     url = f"{BASE_URL}/{hash_id}"
-    time.sleep(DETAIL_DELAY)
+    time.sleep(random.uniform(0.01, 0.2))
     for attempt, retry_wait in enumerate([0] + RETRY_DELAYS):
         if retry_wait:
             logger.warning("Rate limited, waiting %ds before retry (attempt %d)", retry_wait, attempt)
