@@ -13,7 +13,7 @@ SAMPLE_LOCALITY = {
 }
 
 SAMPLE_DETAIL = {
-    "name": "Prodej bytu 3+kk, 80 m²",
+    "advert_name": "Prodej bytu 3+kk, 80 m²",
     "price_czk": 5_900_000,
     "is_new_flag": False,
     "locality": SAMPLE_LOCALITY,
