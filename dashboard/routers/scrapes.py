@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import logging
 import httpx
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -10,6 +11,7 @@ from shared.models import ScrapeRun, SearchConfig
 from dashboard.deps import templates
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 UTC = timezone.utc
 
@@ -91,5 +93,5 @@ def trigger_run_config(config_id: int):
     try:
         httpx.post(f"{settings.scraper_url}/run", params={"config_id": config_id}, timeout=5)
     except Exception:
-        pass
+        logger.warning("Failed to trigger scraper for config_id=%s", config_id)
     return RedirectResponse("/scrapes?triggered=1", status_code=303)
