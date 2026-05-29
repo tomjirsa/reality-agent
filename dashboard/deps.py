@@ -6,12 +6,17 @@ templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 def sreality_url(listing) -> str:
-    seo = (listing.raw_json or {}).get("seo", {})
+    raw = listing.raw_json or {}
+    seo = raw.get("seo", {})
     locality = seo.get("locality", "")
+    if not locality:
+        # v1 API has no seo key; derive locality slug from the locality.city field
+        city = raw.get("locality", {}).get("city") or ""
+        locality = city.lower().replace(" ", "-")
     type_name = "pronajem" if listing.category_type_cb == 2 else "prodej"
     main_name = "dum" if listing.category_main_cb == 2 else "byt"
-    # Use a valid placeholder sub-slug; sreality redirects to the correct one
-    sub_slug = "chata" if listing.category_main_cb == 2 else "3+kk"
+    # Placeholder sub-slug; sreality redirects to the correct one based on hash_id
+    sub_slug = "rodinny-dum" if listing.category_main_cb == 2 else "3+kk"
     if locality:
         return f"https://www.sreality.cz/detail/{type_name}/{main_name}/{sub_slug}/{locality}/{listing.hash_id}"
     return f"https://www.sreality.cz/detail/{type_name}/{main_name}/{listing.hash_id}"
