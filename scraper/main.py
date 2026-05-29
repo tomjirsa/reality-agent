@@ -110,13 +110,14 @@ def upsert_listings(
             existing.year_built = d.get("year_built")
             existing.land_area_m2 = d.get("land_area_m2")
             if existing.price_czk != d["price_czk"]:
-                history = ListingPriceHistory(
-                    hash_id=existing.hash_id,
-                    price_czk=existing.price_czk,
-                    price_per_m2=existing.price_per_m2,
-                    recorded_at=now,
-                )
-                db.add(history)
+                if existing.price_czk is not None:
+                    history = ListingPriceHistory(
+                        hash_id=existing.hash_id,
+                        price_czk=existing.price_czk,
+                        price_per_m2=existing.price_per_m2,
+                        recorded_at=now,
+                    )
+                    db.add(history)
                 existing.price_czk = d["price_czk"]
                 existing.price_per_m2 = d["price_per_m2"]
                 stats["updated"] += 1
