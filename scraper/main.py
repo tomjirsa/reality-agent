@@ -275,7 +275,7 @@ app = FastAPI(lifespan=lifespan)
 
 @app.post("/run")
 def trigger_run(background_tasks: BackgroundTasks, config_id: int | None = None):
-    background_tasks.add_task(run_pipeline, config_id)
+    background_tasks.add_task(run_pipeline, config_id=config_id)
     return {"status": "triggered"}
 
 

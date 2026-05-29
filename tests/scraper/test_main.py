@@ -285,6 +285,7 @@ def test_run_pipeline_with_config_id_scrapes_only_that_config():
 
     mock_run_scrape.assert_called_once()
     assert mock_run_scrape.call_args[0][1] is config_a
+    mock_db.query.return_value.filter_by.assert_called_once_with(active=True, id=42)
 
 
 def test_run_pipeline_with_unknown_config_id_does_not_scrape():
