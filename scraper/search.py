@@ -28,7 +28,8 @@ def build_search_params(config: SearchConfig, from_offset: int) -> dict[str, Any
     if config.locality_region_id is not None:
         params["locality_region_id"] = config.locality_region_id
     if config.locality_district_id:
-        params["locality_district_id"] = config.locality_district_id
+        ids = str(config.locality_district_id).split("|")
+        params["locality_district_id"] = ids if len(ids) > 1 else ids[0]
     if config.czk_price_min is not None:
         params["czk_price_summary_min"] = config.czk_price_min
     if config.czk_price_max is not None:

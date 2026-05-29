@@ -43,11 +43,11 @@ def make_search_response(estates, total):
 
 
 def test_build_search_params_basic():
-    config = make_config()
+    config = make_config(locality_district_id="5007")
     params = build_search_params(config, from_offset=0)
     assert params["category_main_cb"] == 1
     assert params["category_type_cb"] == 1
-    assert params["locality_district_id"] == 5007
+    assert params["locality_district_id"] == "5007"
     assert params["no_auction"] == 1
     assert params["limit"] == 20
     assert params["offset"] == 0
@@ -59,6 +59,18 @@ def test_build_search_params_with_price_range():
     assert params["czk_price_summary_min"] == 3_000_000
     assert params["czk_price_summary_max"] == 6_000_000
     assert params["offset"] == 20
+
+
+def test_build_search_params_multi_district_splits_pipe():
+    config = make_config(locality_district_id="72|73")
+    params = build_search_params(config, from_offset=0)
+    assert params["locality_district_id"] == ["72", "73"]
+
+
+def test_build_search_params_single_district_stays_scalar():
+    config = make_config(locality_district_id="5007")
+    params = build_search_params(config, from_offset=0)
+    assert params["locality_district_id"] == "5007"
 
 
 def test_build_search_params_omits_none_values():
