@@ -54,9 +54,9 @@ def test_group_runs_groups_by_config_name():
     t = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     t_end = datetime(2026, 1, 1, 10, 1, tzinfo=UTC)
     rows = [
-        (_make_run(t, t_end), "Config A"),
-        (_make_run(t, t_end), "Config A"),
-        (_make_run(t, t_end), "Config B"),
+        (_make_run(t, t_end), "Config A", 1),
+        (_make_run(t, t_end), "Config A", 1),
+        (_make_run(t, t_end), "Config B", 2),
     ]
     groups = group_runs(rows)
     names = [g["config_name"] for g in groups]
@@ -69,8 +69,8 @@ def test_group_runs_run_count():
     t = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
     t_end = datetime(2026, 1, 1, 10, 1, tzinfo=UTC)
     rows = [
-        (_make_run(t, t_end), "Config A"),
-        (_make_run(t, t_end), "Config A"),
+        (_make_run(t, t_end), "Config A", 1),
+        (_make_run(t, t_end), "Config A", 1),
     ]
     groups = group_runs(rows)
     assert len(groups[0]["runs"]) == 2
@@ -79,20 +79,28 @@ def test_group_runs_run_count():
 def test_group_runs_duration_seconds():
     start = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
     end = datetime(2026, 1, 1, 10, 1, 30, tzinfo=UTC)
-    rows = [(_make_run(start, end), "Config A")]
+    rows = [(_make_run(start, end), "Config A", 1)]
     groups = group_runs(rows)
     assert groups[0]["runs"][0]["duration"] == 90
 
 
 def test_group_runs_duration_none_when_running():
     start = datetime(2026, 1, 1, 10, 0, 0, tzinfo=UTC)
-    rows = [(_make_run(start, None, status="running"), "Config A")]
+    rows = [(_make_run(start, None, status="running"), "Config A", 1)]
     groups = group_runs(rows)
     assert groups[0]["runs"][0]["duration"] is None
 
 
 def test_group_runs_empty():
     assert group_runs([]) == []
+
+
+def test_group_runs_carries_config_id():
+    t = datetime(2026, 1, 1, 10, 0, tzinfo=UTC)
+    t_end = datetime(2026, 1, 1, 10, 1, tzinfo=UTC)
+    rows = [(_make_run(t, t_end), "Config X", 99)]
+    groups = group_runs(rows)
+    assert groups[0]["config_id"] == 99
 
 
 def test_scrape_log_includes_running_run(db_session):
@@ -142,3 +150,26 @@ def test_scrape_log_includes_running_run(db_session):
     assert response.status_code == 200
     assert "42" in response.text
     assert "100" in response.text
+
+
+def test_trigger_run_single_config_calls_scraper_with_config_id(db_session):
+    from unittest.mock import patch, MagicMock
+    from shared.config import settings
+
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    with patch("dashboard.routers.scrapes.httpx.post") as mock_post:
+        mock_post.return_value = MagicMock(status_code=200)
+        client = TestClient(app, follow_redirects=False)
+        response = client.post("/scrapes/run/42")
+    app.dependency_overrides.clear()
+
+    mock_post.assert_called_once_with(
+        f"{settings.scraper_url}/run",
+        params={"config_id": 42},
+        timeout=5,
+    )
+    assert response.status_code == 303
+    assert "/scrapes" in response.headers["location"]
