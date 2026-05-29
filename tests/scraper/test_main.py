@@ -269,3 +269,33 @@ def test_run_scrape_does_not_count_gone_listings_in_progress(db):
     run = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
     assert run.progress_total == 2   # both estates counted in total
     assert run.progress_done == 1    # only the successful one counted
+
+
+def test_run_pipeline_with_config_id_scrapes_only_that_config():
+    config_a = SearchConfig(name="PipelineOnlyA", category_main_cb=17, category_type_cb=17, active=True, created_at=datetime.now(UTC))
+    mock_db = MagicMock()
+    mock_db.query.return_value.filter_by.return_value.all.return_value = [config_a]
+
+    with patch("scraper.main.SessionLocal", return_value=mock_db), \
+         patch("scraper.main.run_scrape") as mock_run_scrape, \
+         patch("scraper.main.settings") as mock_settings:
+        mock_settings.mapy_api_key = ""
+        mock_settings.analyzer_url = "http://unused"
+        run_pipeline(config_id=42)
+
+    mock_run_scrape.assert_called_once()
+    assert mock_run_scrape.call_args[0][1] is config_a
+
+
+def test_run_pipeline_with_unknown_config_id_does_not_scrape():
+    mock_db = MagicMock()
+    mock_db.query.return_value.filter_by.return_value.all.return_value = []
+
+    with patch("scraper.main.SessionLocal", return_value=mock_db), \
+         patch("scraper.main.run_scrape") as mock_run_scrape, \
+         patch("scraper.main.settings") as mock_settings:
+        mock_settings.mapy_api_key = ""
+        mock_settings.analyzer_url = "http://unused"
+        run_pipeline(config_id=99999)
+
+    mock_run_scrape.assert_not_called()

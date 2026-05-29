@@ -222,13 +222,16 @@ def cleanup_stale_runs(db: Session) -> None:
         logger.info("Marked %d stale scrape run(s) as aborted", len(stale))
 
 
-def run_pipeline() -> None:
+def run_pipeline(config_id: int | None = None) -> None:
     if not _scrape_lock.acquire(blocking=False):
         logger.info("Scrape already running, skipping")
         return
     db = SessionLocal()
     try:
-        configs = db.query(SearchConfig).filter_by(active=True).all()
+        if config_id is not None:
+            configs = db.query(SearchConfig).filter_by(active=True, id=config_id).all()
+        else:
+            configs = db.query(SearchConfig).filter_by(active=True).all()
         for config in configs:
             run_scrape(db, config)
         if settings.mapy_api_key:
@@ -271,8 +274,8 @@ app = FastAPI(lifespan=lifespan)
 
 
 @app.post("/run")
-def trigger_run(background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_pipeline)
+def trigger_run(background_tasks: BackgroundTasks, config_id: int | None = None):
+    background_tasks.add_task(run_pipeline, config_id)
     return {"status": "triggered"}
 
 
