@@ -1,4 +1,7 @@
 {
+  "env": {
+    "POETRY_VENV_PYTHON": "/home/kali/.cache/pypoetry/virtualenvs/reality-agent-2UUuIZvk-py3.13/bin/python"
+  },
   "permissions": {
     "allow": [
       "Bash(poetry run pytest*)",
@@ -6,6 +9,8 @@
       "Bash(poetry install*)",
       "Bash(poetry add*)",
       "Bash(poetry run python*)",
+      "Bash(/home/kali/.cache/pypoetry/virtualenvs/reality-agent-2UUuIZvk-py3.13/bin/python*)",
+      "Bash(/home/kali/.cache/pypoetry/virtualenvs/reality-agent-2UUuIZvk-py3.13/bin/pytest*)",
       "Bash(docker compose*)",
       "Bash(docker build*)",
       "Bash(git add*)",
