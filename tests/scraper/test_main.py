@@ -251,3 +251,21 @@ def test_run_scrape_increments_progress_done(db):
 
     run = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
     assert run.progress_done == 2
+
+
+def test_run_scrape_does_not_count_gone_listings_in_progress(db):
+    config = make_search_config(db)
+    raw_estates = [
+        {"hash_id": 6005, "price_czk": 5_000_000},  # will be gone (None)
+        {"hash_id": 6006, "price_czk": 4_000_000},  # will succeed
+    ]
+    with patch("scraper.main.browser_client") as mock_bc, \
+         patch("scraper.main.search_all", return_value=raw_estates), \
+         patch("scraper.main.fetch_detail", side_effect=[None, make_listing_detail(6006)]):
+        mock_bc.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_bc.return_value.__exit__ = MagicMock(return_value=False)
+        run_scrape(db, config)
+
+    run = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
+    assert run.progress_total == 2   # both estates counted in total
+    assert run.progress_done == 1    # only the successful one counted
