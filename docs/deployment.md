@@ -15,12 +15,16 @@ The stack runs as four Docker Compose services: `db` (PostgreSQL 16), `scraper`,
    cd reality-agent
    ```
 
-2. **Create `.env`** from the example below and fill in your values:
+2. **Create `.env`** from the template and fill in your values:
+   ```bash
+   cp .env.example .env
+   ```
+   Required values to set:
    ```env
-   POSTGRES_USER=user
    POSTGRES_PASSWORD=yourpassword
-   DATABASE_URL=postgresql://user:yourpassword@db:5432/reality
-   MAPY_API_KEY=your_mapy_api_key_here
+   SREALITY_USERNAME=your-seznam-email@seznam.cz
+   SREALITY_PASSWORD=your-seznam-password
+   SMTP_PASSWORD=your-smtp-app-password
    ```
 
 3. **Build and start all services:**
@@ -58,9 +62,14 @@ Migrations are always safe on existing data (additive only).
 
 | Variable | Required | Description |
 |---|---|---|
-| `POSTGRES_USER` | yes | PostgreSQL username |
-| `POSTGRES_PASSWORD` | yes | PostgreSQL password |
-| `DATABASE_URL` | yes | Full SQLAlchemy connection string |
+| `POSTGRES_URL` | yes | Full SQLAlchemy connection string (e.g. `postgresql://user:pass@db:5432/reality`) |
+| `POSTGRES_PASSWORD` | yes | PostgreSQL password (also used by the `db` container) |
+| `SREALITY_USERNAME` | yes | Seznam account email used to authenticate with the Sreality v1 API |
+| `SREALITY_PASSWORD` | yes | Password for the Seznam account above |
+| `SMTP_HOST` | no | SMTP server for price-drop alerts |
+| `SMTP_USER` | no | SMTP login |
+| `SMTP_PASSWORD` | no | SMTP app password |
+| `ALERT_EMAIL` | no | Address to send alerts to |
 | `MAPY_API_KEY` | no | mapy.cz API key for travel distance enrichment. Leave empty to skip enrichment. |
 
 ## Ports

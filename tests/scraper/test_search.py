@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from scraper.search import search_page, search_all, build_search_params
 from shared.models import SearchConfig
 from datetime import datetime, timezone
@@ -30,14 +30,16 @@ def make_config(**kwargs):
     return config
 
 
-def make_estate(hash_id=1001, price=5_000_000, name="Byt 3+kk", locality="Praha 2"):
+def make_estate(hash_id=1001, price=5_000_000, locality="Praha 2"):
     return {
         "hash_id": hash_id,
-        "name": name,
         "price_czk": price,
-        "locality": locality,
-        "is_new": False,
+        "locality": {"city": locality, "citypart": locality, "district_id": 5007},
     }
+
+
+def make_search_response(estates, total):
+    return {"pagination": {"total": total}, "results": estates}
 
 
 def test_build_search_params_basic():
@@ -47,8 +49,8 @@ def test_build_search_params_basic():
     assert params["category_type_cb"] == 1
     assert params["locality_district_id"] == 5007
     assert params["no_auction"] == 1
-    assert params["per_page"] == 20
-    assert params["from"] == 0
+    assert params["limit"] == 20
+    assert params["offset"] == 0
 
 
 def test_build_search_params_with_price_range():
@@ -56,7 +58,7 @@ def test_build_search_params_with_price_range():
     params = build_search_params(config, from_offset=20)
     assert params["czk_price_summary_min"] == 3_000_000
     assert params["czk_price_summary_max"] == 6_000_000
-    assert params["from"] == 20
+    assert params["offset"] == 20
 
 
 def test_build_search_params_omits_none_values():
@@ -68,10 +70,7 @@ def test_build_search_params_omits_none_values():
 
 def test_search_page_returns_estates():
     config = make_config()
-    fake_response = {
-        "_embedded": {"estates": [make_estate(1001), make_estate(1002)]},
-        "result_size": 2,
-    }
+    fake_response = make_search_response([make_estate(1001), make_estate(1002)], total=2)
     mock_client = MagicMock()
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
@@ -86,7 +85,7 @@ def test_search_page_returns_estates():
 
 def test_search_page_empty_results():
     config = make_config()
-    fake_response = {"_embedded": {"estates": []}, "result_size": 0}
+    fake_response = make_search_response([], total=0)
     mock_client = MagicMock()
     mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
@@ -100,8 +99,8 @@ def test_search_page_empty_results():
 
 def test_search_all_paginates():
     config = make_config()
-    page1 = {"_embedded": {"estates": [make_estate(i) for i in range(20)]}, "result_size": 25}
-    page2 = {"_embedded": {"estates": [make_estate(i) for i in range(20, 25)]}, "result_size": 25}
+    page1 = make_search_response([make_estate(i) for i in range(20)], total=25)
+    page2 = make_search_response([make_estate(i) for i in range(20, 25)], total=25)
 
     mock_client = MagicMock()
     responses = []

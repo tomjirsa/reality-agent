@@ -23,5 +23,8 @@ class Settings(BaseSettings):
     hot_offer_max_days: int = 7
     mapy_api_key: str = ""
 
+    sreality_username: str = ""
+    sreality_password: str = ""
+
 
 settings = Settings()

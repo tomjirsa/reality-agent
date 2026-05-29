@@ -5,7 +5,7 @@ from shared.models import SearchConfig
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://www.sreality.cz/api/cs/v2/estates"
+BASE_URL = "https://www.sreality.cz/api/v1/estates/search"
 PER_PAGE = 20
 HEADERS = {
     "User-Agent": (
@@ -20,8 +20,8 @@ def build_search_params(config: SearchConfig, from_offset: int) -> dict[str, Any
     params: dict[str, Any] = {
         "category_main_cb": config.category_main_cb,
         "category_type_cb": config.category_type_cb,
-        "per_page": PER_PAGE,
-        "from": from_offset,
+        "limit": PER_PAGE,
+        "offset": from_offset,
     }
     if config.category_sub_cb:
         params["category_sub_cb"] = config.category_sub_cb
@@ -51,8 +51,8 @@ def search_page(
     resp = client.get(BASE_URL, params=params, headers=HEADERS, timeout=30)
     resp.raise_for_status()
     data = resp.json()
-    estates = data.get("_embedded", {}).get("estates", [])
-    total = data.get("result_size", 0)
+    estates = data.get("results", [])
+    total = data.get("pagination", {}).get("total", 0)
     return estates, total
 
 
