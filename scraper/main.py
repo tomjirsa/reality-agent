@@ -129,30 +129,40 @@ def upsert_listings(
 def detect_removals(
     db: Session, config: SearchConfig, current_hash_ids: set[int]
 ) -> int:
-    query = (
-        db.query(Listing)
-        .filter(
-            Listing.is_active == True,
-            Listing.category_main_cb == config.category_main_cb,
-            Listing.category_type_cb == config.category_type_cb,
-            ~Listing.hash_id.in_(current_hash_ids),
-        )
+    # Find listings this config previously found that are no longer in results
+    all_links = (
+        db.query(ListingSearchConfig)
+        .filter(ListingSearchConfig.search_config_id == config.id)
+        .all()
     )
-    if config.locality_district_id:
-        ids = [int(x) for x in config.locality_district_id.split("|") if x.strip()]
-        query = query.filter(Listing.locality_district_id.in_(ids))
-    elif config.locality_region_id is not None:
-        query = query.filter(Listing.locality_region_id == config.locality_region_id)
+    gone_hash_ids = {link.hash_id for link in all_links if link.hash_id not in current_hash_ids}
+    if not gone_hash_ids:
+        return 0
 
-    removed = query.all()
+    # Remove config links for listings no longer found by this config
+    db.query(ListingSearchConfig).filter(
+        ListingSearchConfig.search_config_id == config.id,
+        ListingSearchConfig.hash_id.in_(gone_hash_ids),
+    ).delete(synchronize_session=False)
+
+    # Only mark globally inactive when no other config still claims the listing
     now = datetime.now(UTC)
-    for listing in removed:
-        listing.is_active = False
-        listing.removed_at = now
-        if listing.first_seen_at:
-            listing.days_to_sell = (now.replace(tzinfo=None) - listing.first_seen_at.replace(tzinfo=None)).days
+    count = 0
+    for hash_id in gone_hash_ids:
+        still_linked = db.query(ListingSearchConfig).filter_by(hash_id=hash_id).count()
+        if still_linked == 0:
+            listing = db.query(Listing).filter_by(hash_id=hash_id, is_active=True).first()
+            if listing:
+                listing.is_active = False
+                listing.removed_at = now
+                if listing.first_seen_at:
+                    listing.days_to_sell = (
+                        now.replace(tzinfo=None) - listing.first_seen_at.replace(tzinfo=None)
+                    ).days
+                count += 1
+
     db.commit()
-    return len(removed)
+    return count
 
 
 def run_scrape(db: Session, config: SearchConfig) -> None:
@@ -186,6 +196,7 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
                     db.query(Listing).filter_by(hash_id=hid).update(
                         {"last_seen_at": datetime.now(UTC)}
                     )
+                    _record_config_link(db, hid, config.id)
                 run.progress_done = (run.progress_done or 0) + 1
                 db.commit()
 

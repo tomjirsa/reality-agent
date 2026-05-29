@@ -96,6 +96,7 @@ def test_detect_removals_marks_missing_listings_inactive(db):
         last_seen_at=now - timedelta(days=1),
     )
     db.add(listing)
+    db.add(ListingSearchConfig(hash_id=3001, search_config_id=config.id))
     db.commit()
 
     count = detect_removals(db, config, current_hash_ids=set())
@@ -129,11 +130,87 @@ def test_detect_removals_ignores_present_listings(db):
         last_seen_at=now,
     )
     db.add(listing)
+    db.add(ListingSearchConfig(hash_id=3002, search_config_id=config.id))
     db.commit()
     count = detect_removals(db, config, current_hash_ids={3002})
     db.refresh(listing)
     assert listing.is_active is True
     assert count == 0
+
+
+def test_detect_removals_does_not_touch_listing_owned_by_other_config(db):
+    """Listing in same geography but linked only to config_b must not be touched by config_a's removal pass."""
+    config_a = SearchConfig(name="Config A", category_main_cb=7, category_type_cb=1, locality_district_id=7000, created_at=datetime.now(UTC))
+    config_b = SearchConfig(name="Config B", category_main_cb=7, category_type_cb=1, locality_district_id=7000, created_at=datetime.now(UTC))
+    db.add_all([config_a, config_b])
+    db.flush()
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=3010, name="B only listing", price_czk=8_000_000,
+        category_main_cb=7, category_type_cb=1, locality_district_id=7000,
+        is_active=True, first_seen_at=now - timedelta(days=3), last_seen_at=now,
+    )
+    db.add(listing)
+    db.add(ListingSearchConfig(hash_id=3010, search_config_id=config_b.id))
+    db.commit()
+
+    count = detect_removals(db, config_a, current_hash_ids=set())
+    db.refresh(listing)
+    assert listing.is_active is True, "config_a must not remove a listing it never found"
+    assert count == 0
+
+
+def test_detect_removals_keeps_active_when_other_config_still_linked(db):
+    """Listing linked to two configs stays active when only one config stops finding it."""
+    config_a = SearchConfig(name="Config A2", category_main_cb=6, category_type_cb=1, locality_district_id=6000, created_at=datetime.now(UTC))
+    config_b = SearchConfig(name="Config B2", category_main_cb=6, category_type_cb=1, locality_district_id=6000, created_at=datetime.now(UTC))
+    db.add_all([config_a, config_b])
+    db.flush()
+    now = datetime.now(UTC)
+    listing = Listing(
+        hash_id=3020, name="Shared listing", price_czk=5_000_000,
+        category_main_cb=6, category_type_cb=1, locality_district_id=6000,
+        is_active=True, first_seen_at=now - timedelta(days=5), last_seen_at=now,
+    )
+    db.add(listing)
+    db.add(ListingSearchConfig(hash_id=3020, search_config_id=config_a.id))
+    db.add(ListingSearchConfig(hash_id=3020, search_config_id=config_b.id))
+    db.commit()
+
+    count = detect_removals(db, config_a, current_hash_ids=set())
+    db.refresh(listing)
+    assert listing.is_active is True, "listing still owned by config_b, must stay active"
+    assert count == 0
+    link_a = db.query(ListingSearchConfig).filter_by(hash_id=3020, search_config_id=config_a.id).first()
+    link_b = db.query(ListingSearchConfig).filter_by(hash_id=3020, search_config_id=config_b.id).first()
+    assert link_a is None, "config_a link should be removed"
+    assert link_b is not None, "config_b link must be retained"
+
+
+def test_run_scrape_records_link_for_unchanged_price_existing_listing(db):
+    """When a listing already exists with the same price, run_scrape still records the config link."""
+    config = make_search_config(db)
+    now = datetime.now(UTC)
+    existing = Listing(
+        hash_id=6010, name="Pre-existing", price_czk=5_000_000,
+        area_m2=80, price_per_m2=62500.0, locality="Praha 2",
+        locality_district_id=5007, locality_region_id=10,
+        category_main_cb=1, category_type_cb=1,
+        is_active=True, first_seen_at=now - timedelta(days=2), last_seen_at=now - timedelta(days=1),
+    )
+    db.add(existing)
+    db.commit()
+
+    raw_estates = [{"hash_id": 6010, "price_czk": 5_000_000}]
+    with patch("scraper.main.browser_client") as mock_bc, \
+         patch("scraper.main.search_all", return_value=raw_estates), \
+         patch("scraper.main.fetch_detail", return_value=make_listing_detail(6010)):
+        mock_bc.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_bc.return_value.__exit__ = MagicMock(return_value=False)
+        run_scrape(db, config)
+
+    link = db.query(ListingSearchConfig).filter_by(hash_id=6010, search_config_id=config.id).first()
+    assert link is not None, "config link must be recorded even when price is unchanged"
 
 
 def test_create_and_finish_scrape_run(db):
