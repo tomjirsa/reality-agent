@@ -48,13 +48,25 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
     last_run = db.query(ScrapeRun).order_by(ScrapeRun.started_at.desc()).first()
     next_run = None
     if last_run:
-        next_run = last_run.started_at + timedelta(hours=settings.scrape_interval_hours)
+        # Ensure last_run.started_at is aware if it's naive
+        started_at = last_run.started_at
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=UTC)
+        next_run = started_at + timedelta(hours=settings.scrape_interval_hours)
+
+    running_run = (
+        db.query(ScrapeRun)
+        .filter_by(status="running")
+        .order_by(ScrapeRun.started_at.desc())
+        .first()
+    )
 
     return templates.TemplateResponse(request, "scrapes.html", {
         "groups": groups,
         "next_run": next_run,
         "now": datetime.now(UTC),
         "interval_hours": settings.scrape_interval_hours,
+        "running_run": running_run,
     })
 
 

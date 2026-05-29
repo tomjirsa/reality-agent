@@ -1,8 +1,38 @@
 from datetime import datetime, timezone
+import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+from fastapi.testclient import TestClient
+
 from dashboard.routers.scrapes import group_runs
-from shared.models import ScrapeRun
+from shared.models import ScrapeRun, SearchConfig, Base
+from shared.db import get_db
+from dashboard.main import app
 
 UTC = timezone.utc
+
+TEST_ENGINE = create_engine(
+    "sqlite:///:memory:",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestSession = sessionmaker(bind=TEST_ENGINE, autoflush=False, autocommit=False)
+
+
+@pytest.fixture(autouse=True, scope="module")
+def setup_db_module():
+    Base.metadata.create_all(TEST_ENGINE)
+    yield
+    Base.metadata.drop_all(TEST_ENGINE)
+
+
+@pytest.fixture
+def db_session():
+    db = TestSession()
+    yield db
+    db.rollback()
+    db.close()
 
 
 def _make_run(started_at, finished_at=None, status="success", **kwargs):
@@ -63,3 +93,52 @@ def test_group_runs_duration_none_when_running():
 
 def test_group_runs_empty():
     assert group_runs([]) == []
+
+
+def test_scrape_log_includes_running_run(db_session):
+    from datetime import timedelta
+    config = SearchConfig(
+        name="Running Config",
+        category_main_cb=1,
+        category_type_cb=1,
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(config)
+    db_session.flush()
+
+    # Add a completed run to avoid timezone comparison issues with next_run
+    completed_run = ScrapeRun(
+        search_config_id=config.id,
+        started_at=datetime.now(UTC) - timedelta(hours=2),
+        finished_at=datetime.now(UTC) - timedelta(hours=1, minutes=50),
+        status="success",
+        listings_found=10,
+        listings_new=5,
+        listings_updated=2,
+        listings_removed=0,
+    )
+    db_session.add(completed_run)
+    db_session.flush()
+
+    # Add a running run
+    running_run = ScrapeRun(
+        search_config_id=config.id,
+        started_at=datetime.now(UTC),
+        status="running",
+        progress_total=100,
+        progress_done=42,
+    )
+    db_session.add(running_run)
+    db_session.commit()
+
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    client = TestClient(app)
+    response = client.get("/scrapes")
+    app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert "42" in response.text
+    assert "100" in response.text
