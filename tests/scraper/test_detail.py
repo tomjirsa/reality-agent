@@ -19,9 +19,9 @@ SAMPLE_DETAIL = {
     "locality": SAMPLE_LOCALITY,
     "usable_area": 80,
     "floor_number": 3,
-    "building_type": {"name": "Cihlová"},
-    "building_condition": {"name": "Velmi dobrý"},
-    "ownership": {"name": "Osobní"},
+    "building_type": {"name": "Cihlová", "value": 2},
+    "building_condition": {"name": "Velmi dobrý", "value": 2},
+    "ownership": {"name": "Osobní", "value": 1},
     "elevator": None,
     "energy_efficiency_rating_cb": None,
     "balcony": False,
@@ -37,7 +37,7 @@ SAMPLE_DETAIL = {
 FULL_DETAIL = {
     **SAMPLE_DETAIL,
     "floor_number": 5,
-    "energy_efficiency_rating_cb": {"name": "B"},
+    "energy_efficiency_rating_cb": {"name": "B - Velmi úsporná", "value": 2},
     "elevator": {"value": 1, "name": "Ano"},
     "balcony": True,
     "garage": True,
@@ -116,8 +116,15 @@ def test_parse_detail_null_fields_when_absent():
 
 
 def test_parse_detail_extracts_energy_class():
-    result = parse_detail(FULL_DETAIL, hash_id=HASH_ID)
-    assert result["energy_class"] == "B"
+    data = {**SAMPLE_DETAIL, "energy_efficiency_rating_cb": {"name": "B - Velmi úsporná", "value": 2}}
+    result = parse_detail(data, hash_id=HASH_ID)
+    assert result["energy_class"] == "B - Velmi úsporná"
+
+
+def test_parse_detail_energy_class_none_when_not_specified():
+    data = {**SAMPLE_DETAIL, "energy_efficiency_rating_cb": {"name": "- vyber třídu", "value": 0}}
+    result = parse_detail(data, hash_id=HASH_ID)
+    assert result["energy_class"] is None
 
 
 def test_parse_detail_extracts_elevator_true():
@@ -125,10 +132,16 @@ def test_parse_detail_extracts_elevator_true():
     assert result["has_elevator"] is True
 
 
-def test_parse_detail_elevator_false_when_value_not_1():
-    data = {**SAMPLE_DETAIL, "elevator": {"value": 0, "name": "Ne"}}
+def test_parse_detail_elevator_false_when_explicitly_no():
+    data = {**SAMPLE_DETAIL, "elevator": {"value": 2, "name": "Ne"}}
     result = parse_detail(data, hash_id=HASH_ID)
     assert result["has_elevator"] is False
+
+
+def test_parse_detail_elevator_none_when_not_specified():
+    data = {**SAMPLE_DETAIL, "elevator": {"value": 0, "name": "- nezadáno"}}
+    result = parse_detail(data, hash_id=HASH_ID)
+    assert result["has_elevator"] is None
 
 
 def test_parse_detail_outdoor_space_from_balcony():

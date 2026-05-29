@@ -18,6 +18,13 @@ HEADERS = {
 }
 
 
+def _named_value(obj: Optional[dict]) -> Optional[str]:
+    """Return obj['name'] when the object represents a real selection (value > 0), else None."""
+    if not obj or obj.get("value", 0) == 0:
+        return None
+    return obj.get("name")
+
+
 def _build_locality_string(locality: dict) -> Optional[str]:
     street = locality.get("street") or ""
     citypart = locality.get("citypart") or ""
@@ -33,12 +40,8 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
     price_per_m2 = price_czk / area_m2 if (price_czk and area_m2) else None
 
     elevator = data.get("elevator")
-    has_elevator = None if elevator is None else (elevator.get("value") == 1)
-
-    building_type_obj = data.get("building_type")
-    condition_obj = data.get("building_condition")
-    ownership_obj = data.get("ownership")
-    energy_obj = data.get("energy_efficiency_rating_cb")
+    elev_value = elevator.get("value", 0) if elevator else 0
+    has_elevator = None if elev_value == 0 else (elev_value == 1)
 
     return {
         "hash_id": hash_id,
@@ -50,11 +53,11 @@ def parse_detail(data: dict, hash_id: int) -> dict[str, Any]:
         "locality_district_id": locality.get("district_id"),
         "locality_region_id": locality.get("region_id"),
         "floor": data.get("floor_number"),
-        "building_type": building_type_obj.get("name") if building_type_obj else None,
-        "condition": condition_obj.get("name") if condition_obj else None,
-        "ownership": ownership_obj.get("name") if ownership_obj else None,
+        "building_type": _named_value(data.get("building_type")),
+        "condition": _named_value(data.get("building_condition")),
+        "ownership": _named_value(data.get("ownership")),
         "is_new_flag": bool(data.get("is_new_flag", False)),
-        "energy_class": energy_obj.get("name") if energy_obj else None,
+        "energy_class": _named_value(data.get("energy_efficiency_rating_cb")),
         "has_elevator": has_elevator,
         "has_outdoor_space": bool(
             data.get("balcony") or data.get("loggia") or data.get("terrace")
