@@ -39,6 +39,10 @@ def build_search_params(config: SearchConfig, from_offset: int) -> dict[str, Any
         params["usable_area_min"] = config.usable_area_min
     if config.usable_area_max is not None:
         params["usable_area_max"] = config.usable_area_max
+    if config.estate_area_min is not None:
+        params["estate_area_from"] = config.estate_area_min
+    if config.estate_area_max is not None:
+        params["estate_area_to"] = config.estate_area_max
     if config.ownership is not None:
         params["ownership"] = config.ownership
     if config.no_auction:

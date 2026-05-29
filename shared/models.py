@@ -23,6 +23,8 @@ class SearchConfig(Base):
     czk_price_max: Mapped[Optional[int]] = mapped_column(Integer)
     usable_area_min: Mapped[Optional[int]] = mapped_column(Integer)
     usable_area_max: Mapped[Optional[int]] = mapped_column(Integer)
+    estate_area_min: Mapped[Optional[int]] = mapped_column(Integer)
+    estate_area_max: Mapped[Optional[int]] = mapped_column(Integer)
     ownership: Mapped[Optional[int]] = mapped_column(Integer)
     no_auction: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

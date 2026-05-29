@@ -18,6 +18,8 @@ def make_config(**kwargs):
         czk_price_max=None,
         usable_area_min=None,
         usable_area_max=None,
+        estate_area_min=None,
+        estate_area_max=None,
         ownership=None,
         no_auction=True,
         active=True,
@@ -107,6 +109,20 @@ def test_search_page_empty_results():
     estates, total = search_page(mock_client, config, from_offset=0)
     assert estates == []
     assert total == 0
+
+
+def test_build_search_params_with_estate_area_range():
+    config = make_config(estate_area_min=500, estate_area_max=1500)
+    params = build_search_params(config, from_offset=0)
+    assert params["estate_area_from"] == 500
+    assert params["estate_area_to"] == 1500
+
+
+def test_build_search_params_omits_none_estate_area():
+    config = make_config(estate_area_min=None, estate_area_max=None)
+    params = build_search_params(config, from_offset=0)
+    assert "estate_area_from" not in params
+    assert "estate_area_to" not in params
 
 
 def test_search_all_paginates():
