@@ -1,4 +1,5 @@
 import logging
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -17,6 +18,7 @@ from scraper.detail import fetch_detail
 
 logger = logging.getLogger(__name__)
 UTC = timezone.utc
+_scrape_lock = threading.Lock()
 
 
 def create_scrape_run(db: Session, config: SearchConfig) -> ScrapeRun:
@@ -206,6 +208,9 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
 
 
 def run_pipeline() -> None:
+    if not _scrape_lock.acquire(blocking=False):
+        logger.info("Scrape already running, skipping")
+        return
     db = SessionLocal()
     try:
         configs = db.query(SearchConfig).filter_by(active=True).all()
@@ -222,6 +227,7 @@ def run_pipeline() -> None:
         logger.exception("Pipeline failed")
     finally:
         db.close()
+        _scrape_lock.release()
 
 
 @asynccontextmanager

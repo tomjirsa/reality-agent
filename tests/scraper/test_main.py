@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 from shared.models import SearchConfig, Listing, ListingPriceHistory, ScrapeRun, ListingSearchConfig
-from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run
+from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run, run_pipeline, _scrape_lock
 
 UTC = timezone.utc
 
@@ -168,3 +168,13 @@ def test_upsert_does_not_duplicate_link_on_second_call(db):
         hash_id=4002, search_config_id=config.id
     ).all()
     assert len(links) == 1
+
+
+def test_run_pipeline_skips_if_already_running():
+    with patch("scraper.main.SessionLocal") as mock_db:
+        _scrape_lock.acquire()
+        try:
+            run_pipeline()
+        finally:
+            _scrape_lock.release()
+        mock_db.assert_not_called()
