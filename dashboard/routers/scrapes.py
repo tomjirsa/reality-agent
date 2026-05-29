@@ -18,9 +18,14 @@ UTC = timezone.utc
 
 def group_runs(rows: list[tuple]) -> list[dict]:
     groups: dict[str, dict] = {}
-    for run, config_name, config_id in rows:
+    for run, config_name, config_id, config_active in rows:
         if config_name not in groups:
-            groups[config_name] = {"config_name": config_name, "config_id": config_id, "runs": []}
+            groups[config_name] = {
+                "config_name": config_name,
+                "config_id": config_id,
+                "config_active": config_active,
+                "runs": [],
+            }
         duration = None
         if run.finished_at and run.started_at:
             duration = int((run.finished_at - run.started_at).total_seconds())
@@ -40,7 +45,7 @@ def group_runs(rows: list[tuple]) -> list[dict]:
 @router.get("/scrapes", response_class=HTMLResponse)
 def scrape_log(request: Request, db: Session = Depends(get_db)):
     rows = (
-        db.query(ScrapeRun, SearchConfig.name, SearchConfig.id)
+        db.query(ScrapeRun, SearchConfig.name, SearchConfig.id, SearchConfig.active)
         .join(SearchConfig, ScrapeRun.search_config_id == SearchConfig.id)
         .order_by(ScrapeRun.started_at.desc())
         .all()
@@ -49,7 +54,12 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
     grouped_names = {g["config_name"] for g in groups}
     for config in db.query(SearchConfig).order_by(SearchConfig.name).all():
         if config.name not in grouped_names:
-            groups.append({"config_name": config.name, "config_id": config.id, "runs": []})
+            groups.append({
+                "config_name": config.name,
+                "config_id": config.id,
+                "config_active": config.active,
+                "runs": [],
+            })
 
     last_run = db.query(ScrapeRun).order_by(ScrapeRun.started_at.desc()).first()
     next_run = None

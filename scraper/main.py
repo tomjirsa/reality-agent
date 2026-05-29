@@ -234,6 +234,7 @@ def run_pipeline(config_id: int | None = None) -> None:
             configs = db.query(SearchConfig).filter_by(active=True).all()
         for config in configs:
             run_scrape(db, config)
+        # Enrichment and analysis always run after any scrape, whether full or per-config.
         if settings.mapy_api_key:
             from enricher.main import enrich_all_configs
             enrich_all_configs(db, settings.mapy_api_key)

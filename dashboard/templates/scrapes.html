@@ -84,10 +84,12 @@
           <span class="badge bg-secondary ms-2">no runs</span>
         {% endif %}
       </button>
+      {% if group.config_active %}
       <form method="post" action="/scrapes/run/{{ group.config_id }}"
             class="d-flex align-items-center px-2 border-start">
         <button type="submit" class="btn btn-outline-primary btn-sm">Run</button>
       </form>
+      {% endif %}
     </div>
     <div id="{{ loop_id }}" class="accordion-collapse collapse">
       <div class="accordion-body p-0">
