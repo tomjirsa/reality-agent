@@ -161,6 +161,8 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
     try:
         with browser_client() as client:
             raw_estates = search_all(client, config)
+            run.progress_total = len(raw_estates)
+            db.commit()
             current_hash_ids = {e["hash_id"] for e in raw_estates}
 
             existing_prices = {
@@ -184,7 +186,8 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
                     db.query(Listing).filter_by(hash_id=hid).update(
                         {"last_seen_at": datetime.now(UTC)}
                     )
-                    db.commit()
+                run.progress_done = (run.progress_done or 0) + 1
+                db.commit()
 
             removed = detect_removals(db, config, current_hash_ids) if current_hash_ids else 0
 

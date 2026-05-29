@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 from shared.models import SearchConfig, Listing, ListingPriceHistory, ScrapeRun, ListingSearchConfig
-from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run, run_pipeline, _scrape_lock, cleanup_stale_runs
+from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run, run_pipeline, _scrape_lock, cleanup_stale_runs, run_scrape
 
 UTC = timezone.utc
 
@@ -213,3 +213,41 @@ def test_cleanup_stale_runs_leaves_finished_runs_alone(db):
     db.refresh(finished)
 
     assert finished.status == "success"
+
+
+def test_run_scrape_sets_progress_total(db):
+    config = make_search_config(db)
+    raw_estates = [
+        {"hash_id": 6001, "price_czk": 5_000_000},
+        {"hash_id": 6002, "price_czk": 4_000_000},
+    ]
+    with patch("scraper.main.browser_client") as mock_bc, \
+         patch("scraper.main.search_all", return_value=raw_estates), \
+         patch("scraper.main.fetch_detail", side_effect=[
+             make_listing_detail(6001), make_listing_detail(6002)
+         ]):
+        mock_bc.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_bc.return_value.__exit__ = MagicMock(return_value=False)
+        run_scrape(db, config)
+
+    run = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
+    assert run.progress_total == 2
+
+
+def test_run_scrape_increments_progress_done(db):
+    config = make_search_config(db)
+    raw_estates = [
+        {"hash_id": 6003, "price_czk": 5_000_000},
+        {"hash_id": 6004, "price_czk": 4_000_000},
+    ]
+    with patch("scraper.main.browser_client") as mock_bc, \
+         patch("scraper.main.search_all", return_value=raw_estates), \
+         patch("scraper.main.fetch_detail", side_effect=[
+             make_listing_detail(6003), make_listing_detail(6004)
+         ]):
+        mock_bc.return_value.__enter__ = MagicMock(return_value=MagicMock())
+        mock_bc.return_value.__exit__ = MagicMock(return_value=False)
+        run_scrape(db, config)
+
+    run = db.query(ScrapeRun).filter_by(search_config_id=config.id).one()
+    assert run.progress_done == 2
