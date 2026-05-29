@@ -60,6 +60,9 @@ def scrape_log(request: Request, db: Session = Depends(get_db)):
         .order_by(ScrapeRun.started_at.desc())
         .first()
     )
+    # Normalise started_at to UTC-aware so the template can subtract `now` safely
+    if running_run and running_run.started_at and running_run.started_at.tzinfo is None:
+        running_run.started_at = running_run.started_at.replace(tzinfo=UTC)
 
     return templates.TemplateResponse(request, "scrapes.html", {
         "groups": groups,

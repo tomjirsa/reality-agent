@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Scrape Log{% endblock %}
+{% block head %}
+{% if running_run %}<meta http-equiv="refresh" content="5">{% endif %}
+{% endblock %}
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-2">
   <h2 class="mb-0">Scrape Log</h2>
@@ -13,6 +16,35 @@
     Scrape pipeline triggered — check back in a moment for new results.
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
   </div>
+{% endif %}
+
+{% if running_run %}
+<div class="card mb-3 border-primary">
+  <div class="card-body py-2">
+    {% if running_run.progress_total %}
+      {% set done = running_run.progress_done or 0 %}
+      {% set total = running_run.progress_total %}
+      {% set pct = ((done / total) * 100) | int %}
+      {% set elapsed = (now - running_run.started_at).seconds %}
+      <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="fw-semibold text-primary">Scraping…</span>
+        <span class="text-muted small">{{ done }} / {{ total }} listings &nbsp;·&nbsp; {{ elapsed }}s elapsed</span>
+      </div>
+      <div class="progress" style="height: 8px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             role="progressbar"
+             style="width: {{ pct }}%"
+             aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100">
+        </div>
+      </div>
+    {% else %}
+      <div class="d-flex align-items-center gap-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <span class="text-muted">Starting scrape…</span>
+      </div>
+    {% endif %}
+  </div>
+</div>
 {% endif %}
 
 {% if next_run %}
