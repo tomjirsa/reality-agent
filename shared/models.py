@@ -121,6 +121,8 @@ class ScrapeRun(Base):
     listings_removed: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     status: Mapped[str] = mapped_column(Text, default="running", nullable=False)
     error_message: Mapped[Optional[str]] = mapped_column(Text)
+    progress_total: Mapped[Optional[int]] = mapped_column(Integer)
+    progress_done: Mapped[Optional[int]] = mapped_column(Integer)
 
 
 class ListingSearchConfig(Base):

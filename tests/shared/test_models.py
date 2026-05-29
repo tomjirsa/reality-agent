@@ -204,3 +204,12 @@ def test_listing_distance_roundtrip(db):
     assert fetched.travel_mode == "car"
     assert config.destination_lat == 50.08
     assert config.travel_mode == "car"
+
+
+def test_scrape_run_has_progress_columns():
+    from shared.models import ScrapeRun
+    run = ScrapeRun()
+    assert hasattr(run, "progress_total")
+    assert hasattr(run, "progress_done")
+    assert run.progress_total is None
+    assert run.progress_done is None
