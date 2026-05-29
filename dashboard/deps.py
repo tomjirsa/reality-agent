@@ -1,3 +1,4 @@
+import unicodedata
 from pathlib import Path
 from fastapi.templating import Jinja2Templates
 
@@ -15,8 +16,13 @@ def sreality_url(listing) -> str:
         locality = city.lower().replace(" ", "-")
     type_name = "pronajem" if listing.category_type_cb == 2 else "prodej"
     main_name = "dum" if listing.category_main_cb == 2 else "byt"
-    # Placeholder sub-slug; sreality redirects to the correct one based on hash_id
-    sub_slug = "rodinny-dum" if listing.category_main_cb == 2 else "3+kk"
+    sub_name = (raw.get("category_sub_cb") or {}).get("name", "")
+    if sub_name:
+        sub_slug = unicodedata.normalize("NFD", sub_name.lower())
+        sub_slug = "".join(c for c in sub_slug if unicodedata.category(c) != "Mn")
+        sub_slug = sub_slug.replace(" ", "-")
+    else:
+        sub_slug = "rodinny-dum" if listing.category_main_cb == 2 else "3+kk"
     if locality:
         return f"https://www.sreality.cz/detail/{type_name}/{main_name}/{sub_slug}/{locality}/{listing.hash_id}"
     return f"https://www.sreality.cz/detail/{type_name}/{main_name}/{listing.hash_id}"
