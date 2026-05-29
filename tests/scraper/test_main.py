@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 from shared.models import SearchConfig, Listing, ListingPriceHistory, ScrapeRun, ListingSearchConfig
-from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run, run_pipeline, _scrape_lock
+from scraper.main import upsert_listings, detect_removals, create_scrape_run, finish_scrape_run, run_pipeline, _scrape_lock, cleanup_stale_runs
 
 UTC = timezone.utc
 
@@ -178,3 +178,38 @@ def test_run_pipeline_skips_if_already_running():
         finally:
             _scrape_lock.release()
         mock_db.assert_not_called()
+
+
+def test_cleanup_stale_runs_marks_running_as_aborted(db):
+    config = make_search_config(db)
+    stale = ScrapeRun(
+        search_config_id=config.id,
+        started_at=datetime.now(UTC) - timedelta(hours=2),
+        status="running",
+    )
+    db.add(stale)
+    db.commit()
+
+    cleanup_stale_runs(db)
+    db.refresh(stale)
+
+    assert stale.status == "aborted"
+    assert stale.finished_at is not None
+
+
+def test_cleanup_stale_runs_leaves_finished_runs_alone(db):
+    config = make_search_config(db)
+    now = datetime.now(UTC)
+    finished = ScrapeRun(
+        search_config_id=config.id,
+        started_at=now - timedelta(hours=1),
+        finished_at=now,
+        status="success",
+    )
+    db.add(finished)
+    db.commit()
+
+    cleanup_stale_runs(db)
+    db.refresh(finished)
+
+    assert finished.status == "success"

@@ -207,6 +207,17 @@ def run_scrape(db: Session, config: SearchConfig) -> None:
         logger.exception("Scrape failed for config %s", config.name)
 
 
+def cleanup_stale_runs(db: Session) -> None:
+    stale = db.query(ScrapeRun).filter_by(status="running").all()
+    now = datetime.now(UTC)
+    for run in stale:
+        run.status = "aborted"
+        run.finished_at = now
+    if stale:
+        db.commit()
+        logger.info("Marked %d stale scrape run(s) as aborted", len(stale))
+
+
 def run_pipeline() -> None:
     if not _scrape_lock.acquire(blocking=False):
         logger.info("Scrape already running, skipping")
@@ -232,6 +243,12 @@ def run_pipeline() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    db = SessionLocal()
+    try:
+        cleanup_stale_runs(db)
+    finally:
+        db.close()
+
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         run_pipeline,
