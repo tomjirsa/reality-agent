@@ -108,9 +108,11 @@ def toggle_config(config_id: int, db: Session = Depends(get_db)):
 
 @router.post("/configs/{config_id}/delete")
 def delete_config(config_id: int, db: Session = Depends(get_db)):
-    from shared.models import ScrapeRun
+    from shared.models import ScrapeRun, ListingSearchConfig, ListingDistance
     config = db.query(SearchConfig).filter_by(id=config_id).first()
     if config:
+        db.query(ListingDistance).filter_by(search_config_id=config_id).delete()
+        db.query(ListingSearchConfig).filter_by(search_config_id=config_id).delete()
         db.query(ScrapeRun).filter_by(search_config_id=config_id).delete()
         db.delete(config)
         db.commit()
