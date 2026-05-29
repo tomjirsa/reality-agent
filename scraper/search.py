@@ -24,7 +24,8 @@ def build_search_params(config: SearchConfig, from_offset: int) -> dict[str, Any
         "offset": from_offset,
     }
     if config.category_sub_cb:
-        params["category_sub_cb"] = config.category_sub_cb
+        ids = str(config.category_sub_cb).split("|")
+        params["category_sub_cb"] = ids if len(ids) > 1 else ids[0]
     if config.locality_region_id is not None:
         params["locality_region_id"] = config.locality_region_id
     if config.locality_district_id:
